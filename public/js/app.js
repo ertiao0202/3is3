@@ -179,7 +179,7 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
-  /* ===  压缩版 prompt ≤600 token  === */
+  /* ===  压缩版 prompt ≤600 token（方案 A） === */
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
 Output exactly:
 Title: ${title}
@@ -209,7 +209,7 @@ ${content}`;
   /* ===  结束  === */
 
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
-  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
   return parseReport(json.choices[0].message.content);
@@ -218,7 +218,7 @@ ${content}`;
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
-  /* 前端保底注入 */
+  /* 保底注入 */
   if (!md.trim().endsWith('Summary:')) {
     r.facts  = [{text:'Parse truncated by length.',conf:0.5}];
     r.opinions=[{text:'Parse truncated by length.',conf:0.5}];
