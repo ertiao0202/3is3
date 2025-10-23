@@ -221,7 +221,7 @@ function parseReport(md){
   /* 格式存在检测（与实际空格一致） */
   const hasFacts    = md.includes('Facts:') && md.includes('<fact>');
   const hasOpinions = md.includes('Opinions:') && md.includes('<opinion>');
-  const hasBias     = md.includes('Bias:') && md.includes('eg:<eg>');   // ← 无空格
+ const hasBias = md.includes('Bias:') && /eg:<eg>[\s\S]*?<\/eg>/.test(md);  // ← 无空格
   const hasPub      = md.includes('Publisher tip:');
   const hasPR       = md.includes('PR tip:');
   const hasSum      = md.includes('Summary:');
