@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM) */ 
+/* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -181,64 +181,53 @@ async function fetchContent(raw){
 async function analyzeContent(content, title){
   const prompt = `System:
 You are FactLens, an impartial English-content auditor.
-Output MUST follow the JSON schema below; extra keys or line breaks will break parsing.
-If primary language ≠ English, return ERROR:NON_ENGLISH.
+Output MUST follow the MACHINE-FORM below; missing blanks = broken parser.
 
-POOL emotional:
+WORD POOL emotional:
 moron,idiot,dumbass,jackass,scumbag,prick,tosser,wanker,muppet,pillock,git,plonker,bogan,drongo,yobbo,galah,knobhead,bellend,nonce,ratbag,bloody idiot,clown,joke,laughing stock,disgrace,embarrassment,pathetic,clueless,brainless,thick,dim,dense,delusional,paranoid,hack,shill,grifter,conman,fraud,liar,cheat,snake,weasel,rat,cockroach,parasite,leech,bottom-feeder,scum,trash,garbage,dumpster fire,train wreck,basket case,joke of a leader,waste of space,oxygen thief,stain,blight,cancer
 
-POOL binary:
+WORD POOL binary:
 enemy of the people,enemy of the state,traitor,treasonous,un-American,anti-American,un-Australian,un-British,anti-vax,climate denier,libtard,republitard,demorat,RINO,DINO,leftard,rightard,socialist scum,commie,Marxist,fascist,Nazi,Hitler wannabe,Stalinist,dictator-lover,Putin puppet,CCP shill,Beijing stooge,Brussels puppet,globalist elite,coastal elite,beltway insider,deep state,swamp creature,champagne socialist,chardonnay socialist,latte-sipping lefty,inner-city greenie,Tory scum,Labour parasite
 
-Task:
-1. Core message: ≤25 words, third-person, no "the author/article".
-2. Split sentences; tag each as <fact> or <opinion>.
-   Prepend conf:0.XX (confidence 00-99).
-3. Bias signals (count only if confidence ≥0.5):
-   a) Emotional attack: derogatory/insulting tone (exclude humor/sarcasm).
-   b) Binary opposition: us-vs-them, hostile labels from POOL.
-   c) Mind-reading: claims about motives without evidence.
-   d) Logical fallacy: ad hominem, straw man, slippery slope, false dilemma.
-   For each signal:
-   - List EVERY hit you find (word or 3-word phrase from POOL)
-   - Then give count=max-conf=hits (use "-" if zero)
-4. Credibility: 0–10 relative to English-language news average (5 = average).
-5. Publisher tip: verb-first, ≤80 chars, no quotes.
-6. PR reply: ≤30 words, include source/date placeholder [DATE].
-7. Summary: ≤20 words, neutral voice.
+INSTRUCTIONS:
+1. Core message ≤25 words, third-person, no "the author/article".
+2. Split sentences; tag each as <fact> or <opinion> and prepend conf:0.XX.
+3. For bias signals:
+   a) Copy words/phrases you find from POOL above.
+   b) Fill them into the blanks below; leave blank = none found.
+4. Credibility 0–10 (5 = average news).
+5. Publisher tip ≤80 chars, verb-first.
+6. PR reply ≤30 words, include [DATE].
+7. Summary ≤20 words, neutral.
 
-Example output snippet:
+MACHINE-FORM (do not change format or remove blanks):
 -----
-Core: COVID vaccines are safe and effective.
-Credibility: 6.5
+Core: _________________________
+Credibility: ___
+
 Facts:
-1. conf:0.92 <fact>mRNA vaccines reduced hospitalisations by 70% in 2021</fact>
+1. conf:0.XX <fact>sentence</fact>
 ...
-Opinions:
-1. conf:0.68 <opinion>anti-vax activists are dangerously misinformed</opinion>
-...
-Bias:
- emotional: 2/0.88/morons|trash
- binary: 1/0.79/anti-vax activists
- mind: 0/0/-
- fallacy: 0/0/-
- stance: leaning-left
-Tip: Remove name-calling to improve trust.
-PR: Latest CDC data show 70 % drop in hospitalisations [DATE].
-Summary: Vaccines sharply cut severe COVID.
------
 
-Output bias line MUST look exactly like:
-emotional: 6/0.88/moron|cancer|traitor|swamp-creature|libtards|scum
-binary: 3/0.79/anti-vax|traitor|scum
-mind: 0/0/-
-fallacy: 0/0/-
+Opinions:
+1. conf:0.XX <opinion>sentence</opinion>
+...
+
+Bias:
+emotional: ___/___/|________1________|________2________|________3________|________4________|________5________|
+binary: ___/___/|________1________|________2________|________3________|________4________|________5________|
+mind: ___/___/|________1________|________2________|________3________|________4________|________5________|
+fallacy: ___/___/____/|________1________|________2________|________3________|________4________|________5________|
+stance: _____________
+
+Tip: _________________________
+PR: _________________________
+Summary: _________________________
 -----
 
 Title: ${title}
 Text:
 ${content}`;
-
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0.15, max_tokens:1200 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
@@ -273,15 +262,15 @@ function parseReport(md){
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
-    // 按 | 拆分计数
-    const emoHits = (b.match(/emotional:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
-    r.bias.emotional = emoHits.length;
-    const binHits = (b.match(/binary:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
-    r.bias.binary = binHits.length;
-    const mindHits = (b.match(/mind:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
-    r.bias.mind = mindHits.length;
-    const fallHits = (b.match(/fallacy:\s*(\d+)\/[\d.]+\/[^\/]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
-    r.bias.fallacy = fallHits.length;
+    // 按竖线拆分，filter 空串即命中个数
+    const emoBlk = (b.match(/emotional:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
+    r.bias.emotional = emoBlk.split('|').filter(Boolean).length;
+    const binBlk = (b.match(/binary:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
+    r.bias.binary = binBlk.split('|').filter(Boolean).length;
+    const mindBlk = (b.match(/mind:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
+    r.bias.mind = mindBlk.split('|').filter(Boolean).length;
+    const fallBlk = (b.match(/fallacy:\s*(\d+)\/([\d.]+)\/[^\/]+\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
+    r.bias.fallacy = fallBlk.split('|').filter(Boolean).length;
     r.bias.stance = (b.match(/stance:\s*(.+?)\s*(?:\n|$)/i) || [, 'neutral'])[1].trim();
   }
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
