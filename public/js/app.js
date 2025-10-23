@@ -284,3 +284,10 @@ function parseReport(md){
 
   return r;
 }
+/* 确保 DOM 已就位再绑定 */
+window.addEventListener('DOMContentLoaded', () => {
+  ui.btn.addEventListener('click', () => {
+    console.log('【2】click 事件已触发');
+    handleAnalyze();
+  });
+});
