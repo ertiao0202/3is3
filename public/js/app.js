@@ -37,9 +37,8 @@ function smoothNeutrality(n){
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
 function listConf(ul, arr){
-  /* 保底文字永不显示“None detected” */
   if (!arr.length) {
-    ul.innerHTML = '<li>（保底）无显式句子</li>';
+    ul.innerHTML = '<li>None detected</li>';
     return;
   }
   ul.innerHTML = arr.map(item => {
@@ -107,7 +106,7 @@ function drawBars({ transparency, factDensity, emotion, consistency }){
 /* 雷达图展开/收起 */
 ui.radarTgl.addEventListener('click', () => {
   const isHidden = ui.radarEl.classList.contains('hidden');
-  ui.radarTgl.classList.toggle('hidden', !isHidden);
+  ui.radarEl.classList.toggle('hidden', !isHidden);
   ui.radarTgl.textContent = isHidden ? 'Hide Radar Chart' : 'View Radar Chart';
   if (isHidden && !radarChart) { /* 首次展开才绘制 */
     const data = [
@@ -180,34 +179,69 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
-  /* ===  压缩版 prompt ≤600 token（方案 A） === */
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
-Output exactly:
+Output MUST follow the structure below; otherwise the parser will break.
+
+Step 0  先决判断（必须执行）
+- 若句子包含人身贬义（insult, slur, mockery）或动机心读（mind-reading, intention claim）→ 直接标 <opinion>，不再往下分析。
+- 若句子为可量化、可溯源、可验证的陈述 → 标 <fact>。
+- 若无法立即判断 → 标 <opinion> 保守处理。
+
+Step 1   summarize the core message in ≤25 words.
+Step 2  Split sentences; tag each as <fact> or <opinion>.
+   For every sentence, prepend conf:0.XX (XX=confidence 00-99, no decimals beyond 2).
+   Rule of thumb:
+   - <fact> 必须满足：①可验证数据源 ②中性用词 ③无动机推测
+   - <opinion> 包括：①价值判断 ②情感/贬义形容词 ③心读动机 ④修辞疑问/感叹
+   Example:
+     ❌ "<fact>Look at that senile fool</fact>" → 违反 ①②③
+     ✅ "<opinion>Look at that senile fool</opinion>"  conf:0.92
+
+HARD RULE:
+IF a sentence contains ANY of these words: senile, fool, moron, clown, scumbag, traitor, parasite, snake, idiot, jackass, waste of space, enemy, scum, garbage, dumpster-fire, bottom-feeder, oxygen-thief, buffoon, drooling, brain-dead
+→ FORCE tag <opinion> and skip further analysis!
+
+Step 3  Count bias signals:
+   a) Emotional words: only attack/derogatory sentiment (exclude praise, wonder, joy).
+   b) Binary opposition: hostile labels (us-vs-them, enemy, evil, traitor, etc.).
+   c) Mind-reading: claims about motives/intentions without evidence.
+   d) Logical fallacy: classic types (slippery slope, straw man, ad hominem, etc.).
+   For each category, give confidence 0-1 and original snippet.
+
+Step 4  One actionable publisher tip (verb-first, ≤100 chars).
+Step 5  One ≤30-word PR reply (with data/date/source).
+Step 6  ≤20-word third-person summary (no "author"/"this article").
+
+Template:
 Title: ${title}
 Credibility: X/10 (one sentence)
 
 Facts:
 1. conf:0.XX <fact>sentence</fact>
-… (≥1)
+…
 
 Opinions:
 1. conf:0.XX <opinion>sentence</opinion>
-… (≥1)
+…
 
 Bias:
-- Emotional: N conf:0.XX eg:<eg>…</eg>
-- Binary: N conf:0.XX eg:<eg>…</eg>
-- Mind-reading: N conf:0.XX eg:<eg>…</eg>
-- Fallacy: N conf:0.XX type:<type>…</type> eg:<eg>…</eg>
-- Stance: neutral/leaning/critical X%
+- Emotional words: N  conf:0.XX  eg: <eg>snippet</eg>
+- Binary opposition: N  conf:0.XX  eg: <eg>snippet</eg>
+- Mind-reading: N  conf:0.XX  eg: <eg>snippet</eg>
+- Logical fallacy: N  conf:0.XX  type:<type>slippery/straw/ad hom</type>  eg: <eg>snippet</eg>
+- Overall stance: neutral/leaning/critical X%
 
-Publisher tip: xxx (verb-first, ≤100)
-PR tip: xxx (≤30 words, include [DATE])
-Summary: xxx (≤20 words)
+Publisher tip:
+xxx
+
+PR tip:
+xxx
+
+Summary:
+xxx
 
 Text:
 ${content}`;
-  /* ===  结束  === */
 
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -218,12 +252,8 @@ ${content}`;
 
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
-
-  /* === 强制保底（永不全空）=== */
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
-
-  /* === Facts 保底 === */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -234,9 +264,6 @@ function parseReport(md){
                return { text: txt, conf: parseFloat(conf) };
              });
   }
-  if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
-
-  /* === Opinions 保底 === */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
@@ -247,9 +274,6 @@ function parseReport(md){
                 return { text: txt, conf: parseFloat(conf) };
               });
   }
-  if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
-
-  /* === Bias 保底 === */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
@@ -261,36 +285,41 @@ function parseReport(md){
       stance    : (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
     };
   }
-  if (!r.bias.emotional) r.bias = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
-
-  /* === Tip & PR & Summary === */
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
-  if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
-
   const pr  = md.match(/PR tip:\s*(.+?)\s*(?:Summary|$)/);
   if (pr) r.pr = pr[1].trim();
-  if (!r.pr) r.pr = '(保底) PR reply not generated [DATE]';
-
   const sum = md.match(/Summary:\s*(.+)/);
   if (sum) r.summary = sum[1].trim();
-  if (!r.summary) r.summary = '(保底) Summary not generated';
-
   return r;
 }
 
-function listConf(ul, arr){
-  /* 保底文字永不显示“None detected” */
-  if (!arr.length) {
-    ul.innerHTML = '<li>（保底）无显式句子</li>';
-    return;
-  }
-  ul.innerHTML = arr.map(item => {
-    const c = item.conf;
-    let cls = '';
-    if (c >= 0.8) cls = 'conf-high';
-    else if (c >= 0.5) cls = 'conf-mid';
-    else cls = 'conf-low';
-    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
-  }).join('');
+function render(r){
+  showSummary(r.summary);
+  const ts = Math.min(10, 0.5 + (r.credibility || 8));
+  const fd = Math.min(10, 1.5 + (r.facts.length || 0) * 1.8);
+  const ebRaw = (r.bias.emotional + r.bias.binary + r.bias.mind);
+  const eb = smoothNeutrality(ebRaw);
+  const cs = Math.min(10, 0.5 + (ts + fd + eb) / 3);
+  drawBars({ transparency: ts, factDensity: fd, emotion: eb, consistency: cs });
+  // 雷达图数据先存起来，等用户首次点击再画
+  ui.radarEl.dataset.ready = 'true';
+  listConf(ui.fact,    r.facts);
+  listConf(ui.opinion, r.opinions);
+  bias(ui.bias,    r.bias);
+  ui.pub.textContent = r.publisher;
+  ui.pr.textContent  = r.pr;
+  ui.fourDim.classList.remove('hidden');
+  ui.results.classList.remove('hidden');
 }
+
+/* 事件绑定 */
+document.addEventListener('DOMContentLoaded', () => {
+  ui.btn.addEventListener('click', handleAnalyze);
+  ui.input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAnalyze();
+    }
+  });
+});
