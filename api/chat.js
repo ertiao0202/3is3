@@ -1,4 +1,4 @@
-// api/chat.js  Edge Runtime
+// 3is3/api/chat.js  Edge Runtime
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
@@ -13,18 +13,22 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
+
+    // 强制锁定 moonshot-v1-8k，避免外部传入其他模型
+    const payload = {
+      ...body,
+      model: 'moonshot-v1-8k',
+      max_tokens: 1200,
+      temperature: 0.15,
+    };
+
     const upstream = await fetch('https://api.moonshot.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...body,
-        model: 'moonshot-v1-8k',
-        max_tokens: 1200,
-        temperature: 0.15,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!upstream.ok) {
