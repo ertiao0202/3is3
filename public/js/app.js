@@ -218,13 +218,21 @@ ${content}`;
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
-  /* 保底注入 */
-  if (!md.trim().endsWith('Summary:')) {
-    r.facts  = [{text:'Parse truncated by length.',conf:0.5}];
-    r.opinions=[{text:'Parse truncated by length.',conf:0.5}];
-    r.publisher='Reduce input or increase max_tokens.';
-    r.pr='We are investigating the issue. [DATE]';
-    r.summary='Parse truncated.';
+  /* 格式存在检测（与实际空格一致） */
+  const hasFacts    = md.includes('Facts:') && md.includes('<fact>');
+  const hasOpinions = md.includes('Opinions:') && md.includes('<opinion>');
+  const hasBias     = md.includes('Bias:') && md.includes('eg:<eg>');
+  const hasPub      = md.includes('Publisher tip:');
+  const hasPR       = md.includes('PR tip:');
+  const hasSum      = md.includes('Summary:');
+
+  if (!hasFacts || !hasOpinions || !hasBias || !hasPub || !hasPR || !hasSum) {
+    r.facts     = [{text:'Format error - section missing',conf:0.5}];
+    r.opinions  = [{text:'Format error - section missing',conf:0.5}];
+    r.bias      = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
+    r.publisher = 'Prompt format mismatch - check API response.';
+    r.pr        = 'We are fixing the format issue. [DATE]';
+    r.summary   = 'Format not generated.';
     return r;
   }
 
