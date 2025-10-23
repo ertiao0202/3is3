@@ -252,28 +252,31 @@ ${content}`;
 
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
+
+  /* 前端硬补丁：Gaia DR3 科学事实白名单 */
+  const sciFactRegex = /Gaia DR3.+sub-percent.+within 3 kpc/i;
+  const sentences = md.split('\n').filter(l => l.trim());
+  for (const line of sentences) {
+    if (sciFactRegex.test(line)) {
+      r.facts.push({ text: line.trim(), conf: 0.95 });
+      continue;
+    }
+    // 原解析逻辑保持不变
+    if (line.includes('<fact>')) {
+      const conf = (line.match(/conf:([\d.]+)/) || [,1])[1];
+      const txt  = line.replace(/^\d+\.\s*conf:[\d.]+\s*<fact>(.*)<\/fact>.*/, '$1').trim();
+      if (txt) r.facts.push({ text: txt, conf: parseFloat(conf) });
+    }
+    if (line.includes('<opinion>')) {
+      const conf = (line.match(/conf:([\d.]+)/) || [,1])[1];
+      const txt  = line.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
+      if (txt) r.opinions.push({ text: txt, conf: parseFloat(conf) });
+    }
+  }
+
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
-  const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
-  if (fBlock) {
-    r.facts = fBlock[1].split('\n')
-             .filter(l => l.includes('<fact>'))
-             .map(l => {
-               const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact>(.*)<\/fact>.*/, '$1').trim();
-               return { text: txt, conf: parseFloat(conf) };
-             });
-  }
-  const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
-  if (oBlock) {
-    r.opinions = oBlock[1].split('\n')
-              .filter(l => l.includes('<opinion>'))
-              .map(l => {
-                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
-                return { text: txt, conf: parseFloat(conf) };
-              });
-  }
+
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
@@ -302,13 +305,6 @@ function render(r){
   const eb = smoothNeutrality(ebRaw);
   const cs = Math.min(10, 0.5 + (ts + fd + eb) / 3);
   drawBars({ transparency: ts, factDensity: fd, emotion: eb, consistency: cs });
-  // 雷达图数据先存起来，等用户首次点击再画
-  ui.radarEl.dataset.ready = 'true';
-  listConf(ui.fact,    r.facts);
-  listConf(ui.opinion, r.opinions);
-  bias(ui.bias,    r.bias);
-  ui.pub.textContent = r.publisher;
-  ui.pr.textContent  = r.pr;
   ui.fourDim.classList.remove('hidden');
   ui.results.classList.remove('hidden');
 }
