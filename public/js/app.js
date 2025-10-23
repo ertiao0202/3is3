@@ -205,6 +205,27 @@ Task:
 6. PR reply: ≤30 words, include source/date placeholder [DATE].
 7. Summary: ≤20 words, neutral voice.
 
+Example output snippet:
+-----
+Core: COVID vaccines are safe and effective.
+Credibility: 6.5
+Facts:
+1. conf:0.92 <fact>mRNA vaccines reduced hospitalisations by 70% in 2021</fact>
+...
+Opinions:
+1. conf:0.68 <opinion>anti-vax activists are dangerously misinformed</opinion>
+...
+Bias:
+ emotional: 2/0.88/morons|trash
+ binary: 1/0.79/anti-vax activists
+ mind: 0/0/-
+ fallacy: 0/0/-
+ stance: leaning-left
+Tip: Remove name-calling to improve trust.
+PR: Latest CDC data show 70 % drop in hospitalisations [DATE].
+Summary: Vaccines sharply cut severe COVID.
+-----
+
 Output schema (fill values only):
 -----
 Core: <string>
@@ -216,10 +237,10 @@ Opinions:
 1. conf:0.XX <opinion>sentence</opinion>
 ...
 Bias:
- emotional: {count}/{conf}/{snippet}
- binary: {count}/{conf}/{snippet}
- mind: {count}/{conf}/{snippet}
- fallacy: {count}/{conf}/{type}/{snippet}
+ emotional: {count}/{conf}/{hit1|hit2|...}
+ binary: {count}/{conf}/{hit1|hit2|...}
+ mind: {count}/{conf}/{hit1|hit2|...}
+ fallacy: {count}/{conf}/{type}/{hit1|hit2|...}
  stance: neutral|leaning-left|leaning-right|critical-left|critical-right
 Tip: <string>
 PR: <string>
@@ -264,11 +285,16 @@ function parseReport(md){
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
-    r.bias.emotional = parseInt((b.match(/Emotional words?:\s*(\d+)/i)  || [,0])[1], 10);
-    r.bias.binary    = parseInt((b.match(/Binary opposition:\s*(\d+)/i) || [,0])[1], 10);
-    r.bias.mind      = parseInt((b.match(/Mind-reading:\s*(\d+)/i)        || [,0])[1], 10);
-    r.bias.fallacy   = parseInt((b.match(/Logical fallacy:\s*(\d+)/i)     || [,0])[1], 10);
-    r.bias.stance    = (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/i) || [, 'neutral 0%'])[1];
+    // 按 | 拆分计数
+    const emoHits = (b.match(/emotional:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
+    r.bias.emotional = emoHits.length;
+    const binHits = (b.match(/binary:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
+    r.bias.binary = binHits.length;
+    const mindHits = (b.match(/mind:\s*(\d+)\/[\d.]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
+    r.bias.mind = mindHits.length;
+    const fallHits = (b.match(/fallacy:\s*(\d+)\/[\d.]+\/[^\/]+\/([^\/\n]+)/i) || [,0,''])[2].split('|').filter(Boolean);
+    r.bias.fallacy = fallHits.length;
+    r.bias.stance = (b.match(/stance:\s*(.+?)\s*(?:\n|$)/i) || [, 'neutral'])[1].trim();
   }
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
