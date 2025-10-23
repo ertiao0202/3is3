@@ -197,6 +197,10 @@ Step 2  Split sentences; tag each as <fact> or <opinion>.
      ❌ "<fact>Look at that senile fool</fact>" → 违反 ①②③
      ✅ "<opinion>Look at that senile fool</opinion>"  conf:0.92
 
+HARD RULE:
+IF a sentence contains ANY of these words: senile, fool, moron, clown, scumbag, traitor, parasite, snake, idiot, jackass, waste of space, enemy, scum, garbage, dumpster-fire, bottom-feeder, oxygen-thief, buffoon, drooling, brain-dead
+→ FORCE tag <opinion> and skip further analysis!
+
 Step 3  Count bias signals:
    a) Emotional words: only attack/derogatory sentiment (exclude praise, wonder, joy).
    b) Binary opposition: hostile labels (us-vs-them, enemy, evil, traitor, etc.).
@@ -239,7 +243,7 @@ xxx
 Text:
 ${content}`;
 
-  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0.15, max_tokens:1200 };
+  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
