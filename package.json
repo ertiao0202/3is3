@@ -1,12 +1,15 @@
 {
   "name": "factlens-app",
   "version": "1.0.0",
-  "description": "Instant Article Bias Check",
+  "description": "Instant Article Bias Check – Moonshot-v1-8k",
   "scripts": {
     "dev": "vercel dev"
   },
   "engines": {
     "node": "22.x"
+  },
+  "dependencies": {
+    "openai": "^4.38.0",
+    "dotenv": "^16.3.1"
   }
 }
- 
