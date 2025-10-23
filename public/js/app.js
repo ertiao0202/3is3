@@ -144,6 +144,31 @@ function drawRadar(data){
   });
 }
 
+/* ========== 把报告画到页面 ========== */
+function render(r){
+  // 1. 四维度条形图
+  drawBars({
+    transparency : smoothNeutrality(r.credibility),
+    factDensity  : r.facts.length  * 1.2,   // 简单示例算法
+    emotion      : 10 - r.bias.emotional * 0.5,
+    consistency  : 10 - r.bias.fallacy  * 0.8
+  });
+
+  // 2. 列表
+  listConf(ui.fact,    r.facts);
+  listConf(ui.opinion, r.opinions);
+  bias(ui.bias, r.bias);
+
+  // 3. 文本
+  showSummary(r.summary);
+  ui.pub.textContent = r.publisher;
+  ui.pr.textContent  = r.pr;
+
+  // 4. 显示区域
+  ui.fourDim.classList.remove('hidden');
+  ui.results.classList.remove('hidden');
+}
+
 /* 主流程 */
 async function handleAnalyze(){
   console.log('【1】按钮被点到了');
@@ -284,7 +309,8 @@ function parseReport(md){
 
   return r;
 }
-/* 确保 DOM 已就位再绑定 */
+
+/* ========== 事件绑定 ========== */
 window.addEventListener('DOMContentLoaded', () => {
   ui.btn.addEventListener('click', () => {
     console.log('【2】click 事件已触发');
