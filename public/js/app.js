@@ -230,8 +230,11 @@ Confidence rule (must obey):
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
 
-【格式死命令】
-每条必须以「序号. conf:0.XX <fact>」或「序号. conf:0.XX <opinion>」开头，conf:0.XX 不可省略！
+【强制格式】
+Facts 与 Opinions 每条必须写成：
+"1. conf:0.XX <fact>内容</fact>"
+"1. conf:0.XX <opinion>内容</opinion>"
+若缺少 conf:0.XX 或标签格式错误，视为未完成任务。
 
 Text:
 ${content}`;
@@ -248,7 +251,6 @@ function parseReport(md){
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
-  /* ====  Facts  ==== */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -261,7 +263,6 @@ function parseReport(md){
   }
   if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
 
-  /* ====  Opinions  ==== */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
@@ -274,7 +275,6 @@ function parseReport(md){
   }
   if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
 
-  /* ====  Bias  ==== */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
