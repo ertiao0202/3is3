@@ -47,13 +47,13 @@ function listConf(ul, arr){
     if (c >= 0.8) cls = 'conf-high';
     else if (c >= 0.5) cls = 'conf-mid';
   ells:['Credibility','Fact Density','Neutrality','Consistency'],
-      datasets;[{
-        label:'Score',
-        data: data,
-        backgroundColor:'rgba(37,99,235,0.2)',
-        borderColor:'#2563eb',
-        pointBackgroundColor:'#2563eb'
-      }]
+      datasets: [{
+  label: 'Score',
+  data: data,
+  backgroundColor: 'rgba(37,99,235,0.2)',
+  borderColor: '#2563eb',
+  pointBackgroundColor: '#2563eb'
+}]
     },
     options:{ scales:{ r:{ suggestedMin:0, suggestedMax:10 } }, plugins:{ legend:{ display:false } } }
   });
