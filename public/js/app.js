@@ -181,19 +181,32 @@ async function fetchContent(raw){
 async function analyzeContent(content, title){
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
 Output MUST follow the structure below; otherwise the parser will break.
-Steps:
-1. Summarize the core message in ≤25 words.
-2. Split sentences; tag each as <fact> or <opinion>.
+
+Step 0  先决判断（必须执行）
+- 若句子包含人身贬义（insult, slur, mockery）或动机心读（mind-reading, intention claim）→ 直接标 <opinion>，不再往下分析。
+- 若句子为可量化、可溯源、可验证的陈述 → 标 <fact>。
+- 若无法立即判断 → 标 <opinion> 保守处理。
+
+Step 1   summarize the core message in ≤25 words.
+Step 2  Split sentences; tag each as <fact> or <opinion>.
    For every sentence, prepend conf:0.XX (XX=confidence 00-99, no decimals beyond 2).
-3. Count bias signals:
-   a) Emotional words: only **attack/derogatory** sentiment (exclude praise, wonder, joy).
-   b) Binary opposition: **hostile labels** (us-vs-them, enemy, evil, traitor, etc.).
-   c) Mind-reading: claims about **motives/intentions** without evidence.
+   Rule of thumb:
+   - <fact> 必须满足：①可验证数据源 ②中性用词 ③无动机推测
+   - <opinion> 包括：①价值判断 ②情感/贬义形容词 ③心读动机 ④修辞疑问/感叹
+   Example:
+     ❌ "<fact>Look at that senile fool</fact>" → 违反 ①②③
+     ✅ "<opinion>Look at that senile fool</opinion>"  conf:0.92
+
+Step 3  Count bias signals:
+   a) Emotional words: only attack/derogatory sentiment (exclude praise, wonder, joy).
+   b) Binary opposition: hostile labels (us-vs-them, enemy, evil, traitor, etc.).
+   c) Mind-reading: claims about motives/intentions without evidence.
    d) Logical fallacy: classic types (slippery slope, straw man, ad hominem, etc.).
-   For each category, give **confidence 0-1** and **original snippet**.
-4. One actionable publisher tip (verb-first, ≤100 chars).
-5. One ≤30-word PR reply (with data/date/source).
-6. ≤20-word third-person summary (no "author"/"this article").
+   For each category, give confidence 0-1 and original snippet.
+
+Step 4  One actionable publisher tip (verb-first, ≤100 chars).
+Step 5  One ≤30-word PR reply (with data/date/source).
+Step 6  ≤20-word third-person summary (no "author"/"this article").
 
 Template:
 Title: ${title}
@@ -226,21 +239,9 @@ xxx
 Text:
 ${content}`;
 
-  // 只改模型名 & 地址，其余逻辑不动
-  const body = {
-    model: 'moonshot-v1-8k',          // 锁定 8k
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.15,
-    max_tokens: 1200,
-  };
-
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) throw new Error(await res.text());
+  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0.15, max_tokens:1200 };
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
   return parseReport(json.choices[0].message.content);
 }
