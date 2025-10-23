@@ -118,7 +118,7 @@ ui.radarTgl.addEventListener('click', () => {
     ];
     drawRadar(data);
   }
-};
+});
 
 function drawRadar(data){
   if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
@@ -136,95 +136,7 @@ function drawRadar(data){
       }]
     },
     options:{ scales:{ r:{ suggestedMin:0, suggestedMax:10 } }, plugins:{ legend:{ display:false } } }
-  )};
-}
-
-/* 主流程 */
-async function handleAnalyze(){
-  const raw = ui.input.value.trim();
-  if (!raw){ hideProgress(); return; }
-
-  isAnalyzing = true;
-  showProgress();
-  try {
-    const { content, title } = await fetchContent(raw);
-    const report = await analyzeContent(content, title);
-    render(report);
-  } catch (e) {
-    console.error(e);
-    let msg = 'We could not retrieve the page. Please paste text directly.';
-    if (e.message.includes('timeout') || e.message.includes('504'))
-      msg = 'Too slow response (>10 s). Try pasting 2-3 paragraphs instead of the full article.';
-    showSummary(msg);
-    await new Promise(r => setTimeout(r, COOL_DOWN));
-  } finally {
-    hideProgress();
-    isAnalyzing = false;
-  }
-}
-
-async function fetchContent(raw){
-  if (!raw.startsWith('http')) return { content: raw.slice(0,2000), title: 'Pasted text' };
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 10000);
-  try{
-    const res = await fetch(`https://r.jina.ai/${encodeURIComponent(raw)}`, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('jina fetch failed');
-    const txt = await res.text();
-    return { content: txt.slice(0, 2000), title: raw };
-  }catch(e){
-    clearInterval(pctTick);
-    pctTick = null;
-    ui.progress.classList.add('hidden');
-}
-
-/* 四维度条形图 */
-function drawBars({ transparency, factDensity, emotion, consistency }){
-  const max = 10;
-  document.getElementById('tsVal').textContent = transparency.toFixed(1);
-  document.getElementById('fdVal').textContent = factDensity.toFixed(1);
-  document.getElementById('ebVal').textContent = emotion.toFixed(1);
-  document.getElementById('csVal').textContent = consistency.toFixed(1);
-  document.getElementById('tsBar').style.width = `${(transparency / max) * 100}%`;
-  document.getElementById('fdBar').style.width = `${(factDensity / max) * 100}%`;
-  document.getElementById('ebBar').style.width = `${(emotion / max) * 100}%`;
-  document.getElementById('csBar').style.width = `${(consistency / max) * 100}%`;
-}
-
-/* 雷达图展开/收起 */
-ui.radarTgl.addEventListener('click', () => {
-  const isHidden = ui.radarEl.classList.contains('hidden');
-  ui.radarTgl.classList.toggle('hidden', !isHidden);
-  ui.radarTgl.textContent = isHidden ? 'Hide Radar Chart' : 'View Radar Chart';
-  if (isHidden && !radarChart) { /* 首次展开才绘制 */
-    const data = [
-      Number(document.getElementById('tsVal').textContent),
-      Number(document.getElementById('fdVal').textContent),
-      Number(document.getElementById('ebVal').textContent),
-      Number(document.getElementById('csVal').textContent)
-    ];
-    drawRadar(data);
-  }
-};
-
-function drawRadar(data){
-  if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
-  if (radarChart) radarChart.destroy();
-  radarChart = new Chart(ui.radarEl, {
-    type:'radar',
-    data:{
-      labels:['Credibility','Fact Density','Neutrality','Consistency'],
-      datasets:[{
-        label:'Score',
-        data,
-        backgroundColor:'rgba(37,99,235,0.2)',
-        borderColor:'#2563eb',
-        pointBackgroundColor:'#2563eb'
-      }]
-    },
-    options:{ scales:{ r:{ suggestedMin:0, suggestedMax:10 } }, plugins:{ legend:{ display:false } } }
-  )};
+  });
 }
 
 /* 主流程 */
