@@ -30,7 +30,7 @@ tx.addEventListener('input', () => {
 });
 
 /* 工具函数 */
-function smoothNeutrality(n){
+function smoothNeutrality(n = 0){
   if (n <= 2)  return 10 - n * 0.5;
   if (n <= 5)  return 9   - (n - 2) * 1.2;
   if (n <= 9)  return 5.4 - (n - 5) * 0.9;
@@ -238,7 +238,7 @@ ${content}`;
 }
 
 function parseReport(md){
-  const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
+  const r = { facts:[], opinions:[], bias:{ emotional:0, binary:0, mind:0, fallacy:0, stance:'neutral 0%' }, summary:'', publisher:'', pr:'', credibility:8 };
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
@@ -264,13 +264,11 @@ function parseReport(md){
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
-    r.bias = {
-      emotional : (b.match(/Emotional words:\s*(\d+)/)||[,0])[1],
-      binary    : (b.match(/Binary opposition:\s*(\d+)/)||[,0])[1],
-      mind      : (b.match(/Mind-reading:\s*(\d+)/)||[,0])[1],
-      fallacy   : (b.match(/Logical fallacy:\s*(\d+)/)||[,0])[1],
-      stance    : (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
-    };
+    r.bias.emotional = parseInt((b.match(/Emotional words?:\s*(\d+)/i)  || [,0])[1], 10);
+    r.bias.binary    = parseInt((b.match(/Binary opposition:\s*(\d+)/i) || [,0])[1], 10);
+    r.bias.mind      = parseInt((b.match(/Mind-reading:\s*(\d+)/i)        || [,0])[1], 10);
+    r.bias.fallacy   = parseInt((b.match(/Logical fallacy:\s*(\d+)/i)     || [,0])[1], 10);
+    r.bias.stance    = (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/i) || [, 'neutral 0%'])[1];
   }
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
@@ -285,7 +283,7 @@ function render(r){
   showSummary(r.summary);
   const ts = Math.min(10, 0.5 + (r.credibility || 8));
   const fd = Math.min(10, 1.5 + (r.facts.length || 0) * 1.8);
-  const ebRaw = (r.bias.emotional + r.bias.binary + r.bias.mind);
+  const ebRaw = (Number(r.bias.emotional) + Number(r.bias.binary) + Number(r.bias.mind));
   const eb = smoothNeutrality(ebRaw);
   const cs = Math.min(10, 0.5 + (ts + fd + eb) / 3);
   drawBars({ transparency: ts, factDensity: fd, emotion: eb, consistency: cs });
