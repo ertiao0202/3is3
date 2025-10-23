@@ -47,7 +47,7 @@ function listConf(ul, arr){
     if (c >= 0.8) cls = 'conf-high';
     else if (c >= 0.5) cls = 'conf-mid';
   ells:['Credibility','Fact Density','Neutrality','Consistency'],
-      datasets:[{
+      datasets;[{
         label:'Score',
         data: data,
         backgroundColor:'rgba(37,99,235,0.2)',
