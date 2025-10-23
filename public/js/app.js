@@ -1,6 +1,6 @@
 /* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
-const url = '/api/chat';
+const url = '/api/chat';   // ← 只调本地 /api/chat，由 Vercel 函数转发到 Kimi
 
 let radarChart;
 let isAnalyzing = false;
@@ -37,7 +37,6 @@ function smoothNeutrality(n){
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
 function listConf(ul, arr){
-  /* 保底文字永不显示“None detected” */
   if (!arr.length) {
     ul.innerHTML = '<li>（保底）无显式句子</li>';
     return;
@@ -73,10 +72,8 @@ function showProgress(){
   ui.fourDim.classList.add('hidden');
   ui.results.classList.add('hidden');
   ui.summary.classList.add('hidden');
-
   $('#pct').textContent = '0';
   $('#progressInner').style.width = '0%';
-
   let pct = 0;
   pctTick = setInterval(() => {
     pct += 2;
@@ -107,9 +104,9 @@ function drawBars({ transparency, factDensity, emotion, consistency }){
 /* 雷达图展开/收起 */
 ui.radarTgl.addEventListener('click', () => {
   const isHidden = ui.radarEl.classList.contains('hidden');
-  ui.radarTgl.classList.toggle('hidden', !isHidden);
   ui.radarTgl.textContent = isHidden ? 'Hide Radar Chart' : 'View Radar Chart';
-  if (isHidden && !radarChart) { /* 首次展开才绘制 */
+  ui.radarEl.classList.toggle('hidden', !isHidden);
+  if (isHidden && !radarChart) {
     const data = [
       Number(document.getElementById('tsVal').textContent),
       Number(document.getElementById('fdVal').textContent),
@@ -129,12 +126,7 @@ function drawRadar(data){
       labels:['Credibility','Fact Density','Neutrality','Consistency'],
       datasets:[{
         label:'Score',
-        data: [
-          Number(document.getElementById('tsVal').textContent),
-          Number(document.getElementById('fdVal').textContent),
-          Number(document.getElementById('ebVal').textContent),
-          Number(document.getElementById('csVal').textContent)
-        ],
+        data: data,
         backgroundColor:'rgba(37,99,235,0.2)',
         borderColor:'#2563eb',
         pointBackgroundColor:'#2563eb'
@@ -146,25 +138,18 @@ function drawRadar(data){
 
 /* ========== 把报告画到页面 ========== */
 function render(r){
-  // 1. 四维度条形图
   drawBars({
     transparency : smoothNeutrality(r.credibility),
-    factDensity  : r.facts.length  * 1.2,   // 简单示例算法
+    factDensity  : r.facts.length  * 1.2,
     emotion      : 10 - r.bias.emotional * 0.5,
     consistency  : 10 - r.bias.fallacy  * 0.8
   });
-
-  // 2. 列表
   listConf(ui.fact,    r.facts);
   listConf(ui.opinion, r.opinions);
   bias(ui.bias, r.bias);
-
-  // 3. 文本
   showSummary(r.summary);
   ui.pub.textContent = r.publisher;
   ui.pr.textContent  = r.pr;
-
-  // 4. 显示区域
   ui.fourDim.classList.remove('hidden');
   ui.results.classList.remove('hidden');
 }
@@ -211,7 +196,6 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
-  /* ===  压缩版 prompt ≤600 token（方案 A） === */
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
 Output exactly:
 Title: ${title}
@@ -238,7 +222,6 @@ Summary: xxx (≤20 words)
 
 Text:
 ${content}`;
-  /* ===  结束  === */
 
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -249,12 +232,9 @@ ${content}`;
 
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
-
-  /* === 强制保底（永不全空）=== */
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
-  /* === Facts 保底 === */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -267,7 +247,6 @@ function parseReport(md){
   }
   if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
 
-  /* === Opinions 保底 === */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
@@ -280,7 +259,6 @@ function parseReport(md){
   }
   if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
 
-  /* === Bias 保底 === */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
@@ -294,7 +272,6 @@ function parseReport(md){
   }
   if (!r.bias.emotional) r.bias = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
 
-  /* === Tip & PR & Summary === */
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
   if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
