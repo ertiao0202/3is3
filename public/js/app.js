@@ -14,10 +14,10 @@ const ui = {
   fourDim : $('#fourDim'),
   results : $('#results'),
   fact    : $('#factList'),
-  opinion : $('#opinionList'),
-  bias    : $('#biasList'),
+  opinion : $('#opinionList)',
+  bias    : $('#biasList)',
   pub     : $('#pubAdvice'),
-  pr      : $('#prAdvice'),
+  pr      : $('#prAdvice)',
   radarEl : $('#radar'),
   radarTgl: $('#radarToggle')
 };
@@ -36,12 +36,12 @@ function smoothNeutrality(n){
   if (n <= 9)  return 5.4 - (n - 5) * 0.9;
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
+/* ========== 方案1：文字显性置信度 ========== */
 function listConf(ul, arr){
   if (!arr.length) {
     ul.innerHTML = '<li>（保底）无显式句子</li>';
     return;
   }
-  /* ==========  只改这里：把百分比显性写出来  ========== */
   ul.innerHTML = arr.map(item => {
     const c = item.conf;
     let cls = '';
@@ -49,7 +49,7 @@ function listConf(ul, arr){
     else if (c >= 0.5) cls = 'conf-mid';
     else cls = 'conf-low';
     return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">
-              ${item.text}<span style="font-size:0.8em;color:#666;margin-left:4px;">${(c*100).toFixed(0)}%</span>
+              ${item.text}<span style="font-size:0.8em;color:#666;margin-left:4px;">conf: ${(c*100).toFixed(0)}%</span>
             </li>`;
   }).join('');
 }
