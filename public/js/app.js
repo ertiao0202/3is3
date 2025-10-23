@@ -1,6 +1,6 @@
 /* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
-const url = '/api/chat';   // 只走本地 /api/chat，由 Vercel 函数转发到 Kimi
+const url = '/api/chat';
 
 let radarChart;
 let isAnalyzing = false;
@@ -141,7 +141,7 @@ function render(r){
   drawBars({
     transparency : smoothNeutrality(r.credibility),
     factDensity  : r.facts.length  * 1.2,
-    emotion      : Math.max(0, 10 - (r.bias.emotional || 0) * 2), // 可调系数
+    emotion      : Math.max(0, 10 - (r.bias.emotional || 0) * 2),
     consistency  : 10 - (r.bias.fallacy || 0) * 0.8
   });
   listConf(ui.fact,    r.facts);
@@ -218,7 +218,8 @@ Bias:
 - Stance: neutral/leaning/critical X%
 
 Publisher tip: xxx (verb-first, ≤100)
-PR tip: xxx (≤30 words, include [DATE])
+PR tip: xxx (≤30 words)   # <= 已删掉 include [DATE]
+
 Summary: xxx (≤20 words)
 
 Confidence rule (must obey):
@@ -231,7 +232,6 @@ Confidence rule (must obey):
 
 Text:
 ${content}`;
-
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1500 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
@@ -286,9 +286,14 @@ function parseReport(md){
   if (pub) r.publisher = pub[1].trim();
   if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
 
+  /* ====  彻底去掉日期  ==== */
   const pr  = md.match(/PR tip:\s*(.+?)\s*(?:Summary|$)/);
-  if (pr) r.pr = pr[1].trim();
-  if (!r.pr) r.pr = '(保底) PR reply not generated [DATE]';
+  if (pr) {
+    r.pr = pr[1]
+          .split('[DATE]')[0]   // 砍掉 [DATE] 及之后
+          .trim();
+  }
+  if (!r.pr) r.pr = '(保底) PR reply not generated';
 
   const sum = md.match(/Summary:\s*(.+)/);
   if (sum) r.summary = sum[1].trim();
