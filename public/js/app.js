@@ -52,10 +52,10 @@ function listConf(ul, arr){
 }
 function bias(ul, b){
   ul.innerHTML = `
-    <li>Emotional words: ${b.emotional}</li>
-    <li>Binary opposition: ${b.binary}</li>
-    <li>Mind-reading: ${b.mind}</li>
-    <li>Logical fallacy: ${b.fallacy}</li>
+    <li><dfn title="Insults or scare words, e.g., 'idiotic', 'dangerous'">Emotional words</dfn>: ${b.emotional}</li>
+    <li><dfn title="Labels that split people into 'good guys' and 'bad guys'">Binary opposition</dfn>: ${b.binary}</li>
+    <li><dfn title="Claiming to know someone's hidden motive with no proof">Mind-reading</dfn>: ${b.mind}</li>
+    <li><dfn title="Classic fallacies: slippery slope, straw man, ad hominem">Logical fallacy</dfn>: ${b.fallacy}</li>
     <li>Overall stance: ${b.stance}</li>
   `;
 }
