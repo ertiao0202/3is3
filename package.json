@@ -1,0 +1,12 @@
+{
+  "name": "factlens-app",
+  "version": "1.0.0",
+  "description": "Instant Article Bias Check",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
+ 
