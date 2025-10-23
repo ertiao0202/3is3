@@ -218,20 +218,21 @@ ${content}`;
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
-  /* 格式存在检测（与实际空格一致） */
-  const hasFacts    = md.includes('Facts:') && md.includes('<fact>');
-  const hasOpinions = md.includes('Opinions:') && md.includes('<opinion>');
- const hasBias = md.includes('Bias:') && /eg:<eg>[\s\S]*?<\/eg>/.test(md);  // ← 无空格
+  /* 格式存在检测（只认标题，最宽松） */
+  const hasFacts    = md.includes('Facts:');
+  const hasOpinions = md.includes('Opinions:');
+  const hasBias     = md.includes('Bias:');
   const hasPub      = md.includes('Publisher tip:');
   const hasPR       = md.includes('PR tip:');
   const hasSum      = md.includes('Summary:');
 
+  /* 保底注入（缺任意一节就显示保底） */
   if (!hasFacts || !hasOpinions || !hasBias || !hasPub || !hasPR || !hasSum) {
-    r.facts     = [{text:'Format error - section missing',conf:0.5}];
-    r.opinions  = [{text:'Format error - section missing',conf:0.5}];
+    r.facts     = [{text:'Section missing - check format',conf:0.5}];
+    r.opinions  = [{text:'Section missing - check format',conf:0.5}];
     r.bias      = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
-    r.publisher = 'Prompt format mismatch - check API response.';
-    r.pr        = 'We are fixing the format issue. [DATE]';
+    r.publisher = 'Format mismatch - verify API response.';
+    r.pr        = 'We are checking the format issue. [DATE]';
     r.summary   = 'Format not generated.';
     return r;
   }
