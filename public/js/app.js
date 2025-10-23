@@ -6,6 +6,7 @@ let radarChart;
 let isAnalyzing = false;
 const COOL_DOWN = 1200;
 
+/* ========== 已修复：英文符号、无中文引号 ========== */
 const ui = {
   input   : $('#urlInput'),
   btn     : $('#analyzeBtn'),
@@ -14,7 +15,7 @@ const ui = {
   fourDim : $('#fourDim'),
   results : $('#results'),
   fact    : $('#factList'),
-  opinion : $('#opinionList)',
+  opinion : $('#opinionList'),
   bias    : $('#biasList'),
   pub     : $('#pubAdvice'),
   pr      : $('#prAdvice'),
