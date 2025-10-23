@@ -52,10 +52,10 @@ function listConf(ul, arr){
 }
 function bias(ul, b){
   ul.innerHTML = `
-    <li><dfn title="Insults or scare words, e.g., 'idiotic', 'dangerous'">Emotional words</dfn>: ${b.emotional}</li>
-    <li><dfn title="Labels that split people into 'good guys' and 'bad guys'">Binary opposition</dfn>: ${b.binary}</li>
-    <li><dfn title="Claiming to know someone's hidden motive with no proof">Mind-reading</dfn>: ${b.mind}</li>
-    <li><dfn title="Classic fallacies: slippery slope, straw man, ad hominem">Logical fallacy</dfn>: ${b.fallacy}</li>
+    <li>Emotional words: ${b.emotional}</li>
+    <li>Binary opposition: ${b.binary}</li>
+    <li>Mind-reading: ${b.mind}</li>
+    <li>Logical fallacy: ${b.fallacy}</li>
     <li>Overall stance: ${b.stance}</li>
   `;
 }
@@ -179,50 +179,54 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
-  const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
-Output MUST follow the structure below; otherwise the parser will break.
-Steps:
-1. Summarize the core message in ≤25 words.
+  const prompt = `System:
+You are FactLens, an impartial English-content auditor.
+Output MUST follow the JSON schema below; extra keys or line breaks will break parsing.
+If primary language ≠ English, return ERROR:NON_ENGLISH.
+
+Examples of emotional attack:
+moron,idiot,dumbass,jackass,scumbag,prick,tosser,wanker,muppet,pillock,git,plonker,bogan,drongo,yobbo,galah,knobhead,bellend,nonce,ratbag,bloody idiot,clown,joke,laughing stock,disgrace,embarrassment,pathetic,clueless,brainless,thick,dim,dense,delusional,paranoid,hack,shill,grifter,conman,fraud,liar,cheat,snake,weasel,rat,cockroach,parasite,leech,bottom-feeder,scum,trash,garbage,dumpster fire,train wreck,basket case,joke of a leader,waste of space,oxygen thief,stain,blight,cancer
+
+Examples of binary opposition:
+enemy of the people,enemy of the state,traitor,treasonous,un-American,anti-American,un-Australian,un-British,anti-vax,climate denier,libtard,republitard,demorat,RINO,DINO,leftard,rightard,socialist scum,commie,Marxist,fascist,Nazi,Hitler wannabe,Stalinist,dictator-lover,Putin puppet,CCP shill,Beijing stooge,Brussels puppet,globalist elite,coastal elite,beltway insider,deep state,swamp creature,champagne socialist,chardonnay socialist,latte-sipping lefty,inner-city greenie,Tory scum,Labour parasite
+
+Task:
+1. Core message: ≤25 words, third-person, no "the author/article".
 2. Split sentences; tag each as <fact> or <opinion>.
-   For every sentence, prepend conf:0.XX (XX=confidence 00-99, no decimals beyond 2).
-3. Count bias signals:
-   a) Emotional words: only **attack/derogatory** sentiment (exclude praise, wonder, joy).
-   b) Binary opposition: **hostile labels** (us-vs-them, enemy, evil, traitor, etc.).
-   c) Mind-reading: claims about **motives/intentions** without evidence.
-   d) Logical fallacy: classic types (slippery slope, straw man, ad hominem, etc.).
-   For each category, give **confidence 0-1** and **original snippet**.
-4. One actionable publisher tip (verb-first, ≤100 chars).
-5. One ≤30-word PR reply (with data/date/source).
-6. ≤20-word third-person summary (no "author"/"this article").
+   Prepend conf:0.XX (confidence 00-99).
+3. Bias signals (count only if confidence ≥0.5):
+   a) Emotional attack: derogatory/insulting tone (exclude humor/sarcasm).
+   b) Binary opposition: us-vs-them, hostile labels as listed above.
+   c) Mind-reading: claims about motives without evidence.
+   d) Logical fallacy: ad hominem, straw man, slippery slope, false dilemma.
+   For each give count, max-conf (0-1), and shortest possible snippet.
+4. Credibility: 0–10 relative to English-language news average (5 = average).
+5. Publisher tip: verb-first, ≤80 chars, no quotes.
+6. PR reply: ≤30 words, include source/date placeholder [DATE].
+7. Summary: ≤20 words, neutral voice.
 
-Template:
-Title: ${title}
-Credibility: X/10 (one sentence)
-
+Output schema (fill values only):
+-----
+Core: <string>
+Credibility: <0-10>
 Facts:
 1. conf:0.XX <fact>sentence</fact>
-…
-
+...
 Opinions:
 1. conf:0.XX <opinion>sentence</opinion>
-…
-
+...
 Bias:
-- Emotional words: N  conf:0.XX  eg: <eg>snippet</eg>
-- Binary opposition: N  conf:0.XX  eg: <eg>snippet</eg>
-- Mind-reading: N  conf:0.XX  eg: <eg>snippet</eg>
-- Logical fallacy: N  conf:0.XX  type:<type>slippery/straw/ad hom</type>  eg: <eg>snippet</eg>
-- Overall stance: neutral/leaning/critical X%
+ emotional: {count}/{conf}/{snippet}
+ binary: {count}/{conf}/{snippet}
+ mind: {count}/{conf}/{snippet}
+ fallacy: {count}/{conf}/{type}/{snippet}
+ stance: neutral|leaning-left|leaning-right|critical-left|critical-right
+Tip: <string>
+PR: <string>
+Summary: <string>
+-----
 
-Publisher tip:
-xxx
-
-PR tip:
-xxx
-
-Summary:
-xxx
-
+Title: ${title}
 Text:
 ${content}`;
 
