@@ -20,7 +20,7 @@ const ui = {
   pr      : $('#prAdvice'),
   radarEl : $('#radar'),
   radarTgl: $('#radarToggle')
-};
+});
 
 /* 自动增高 */
 const tx = ui.input;
