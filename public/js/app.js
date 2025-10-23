@@ -179,72 +179,37 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
+  /* ===  压缩版 prompt ≤600 token  === */
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
-Output MUST follow the structure below; otherwise the parser will break.
-
-Step 0  先决判断（必须执行）
-- 若句子包含人身贬义（insult, slur, mockery）或动机心读（mind-reading, intention claim）→ 直接标 <opinion>，不再往下分析。
-- 若句子为可量化、可溯源、可验证的陈述 → 标 <fact>。
-- 若无法立即判断 → 标 <opinion> 保守处理。
-
-Step 1   summarize the core message in ≤25 words.
-Step 2  Split sentences; tag each as <fact> or <opinion>.
-   For every sentence, prepend conf:0.XX (XX=confidence 00-99, no decimals beyond 2).
-   Rule of thumb:
-   - <fact> 必须满足：①可验证数据源 ②中性用词 ③无动机推测
-   - <opinion> 包括：①价值判断 ②情感/贬义形容词 ③心读动机 ④修辞疑问/感叹
-   Example:
-     ❌ "<fact>Look at that senile fool</fact>" → 违反 ①②③
-     ✅ "<opinion>Look at that senile fool</opinion>"  conf:0.92
-
-HARD RULE:
-IF a sentence contains ANY of these words: senile, fool, moron, clown, scumbag, traitor, parasite, snake, idiot, jackass, waste of space, enemy, scum, garbage, dumpster-fire, bottom-feeder, oxygen-thief, buffoon, drooling, brain-dead
-→ FORCE tag <opinion> and skip further analysis!
-
-Step 3  Count bias signals:
-   a) Emotional words: only attack/derogatory sentiment (exclude praise, wonder, joy).
-   b) Binary opposition: hostile labels (us-vs-them, enemy, evil, traitor, etc.).
-   c) Mind-reading: claims about motives/intentions without evidence.
-   d) Logical fallacy: classic types (slippery slope, straw man, ad hominem, etc.).
-   For each category, give confidence 0-1 and original snippet.
-
-Step 4  One actionable publisher tip (verb-first, ≤100 chars).
-Step 5  One ≤30-word PR reply (with data/date/source).
-Step 6  ≤20-word third-person summary (no "author"/"this article").
-
-Template:
+Output exactly:
 Title: ${title}
 Credibility: X/10 (one sentence)
 
 Facts:
 1. conf:0.XX <fact>sentence</fact>
-…
+… (≥1)
 
 Opinions:
 1. conf:0.XX <opinion>sentence</opinion>
-…
+… (≥1)
 
 Bias:
-- Emotional words: N  conf:0.XX  eg: <eg>snippet</eg>
-- Binary opposition: N  conf:0.XX  eg: <eg>snippet</eg>
-- Mind-reading: N  conf:0.XX  eg: <eg>snippet</eg>
-- Logical fallacy: N  conf:0.XX  type:<type>slippery/straw/ad hom</type>  eg: <eg>snippet</eg>
-- Overall stance: neutral/leaning/critical X%
+- Emotional: N conf:0.XX eg:<eg>…</eg>
+- Binary: N conf:0.XX eg:<eg>…</eg>
+- Mind-reading: N conf:0.XX eg:<eg>…</eg>
+- Fallacy: N conf:0.XX type:<type>…</type> eg:<eg>…</eg>
+- Stance: neutral/leaning/critical X%
 
-Publisher tip:
-xxx
-
-PR tip:
-xxx
-
-Summary:
-xxx
+Publisher tip: xxx (verb-first, ≤100)
+PR tip: xxx (≤30 words, include [DATE])
+Summary: xxx (≤20 words)
 
 Text:
 ${content}`;
+  /* ===  结束  === */
 
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
-  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
   return parseReport(json.choices[0].message.content);
@@ -253,30 +218,40 @@ ${content}`;
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
-  /* 前端硬补丁：Gaia DR3 科学事实白名单 */
-  const sciFactRegex = /Gaia DR3.+sub-percent.+within 3 kpc/i;
-  const sentences = md.split('\n').filter(l => l.trim());
-  for (const line of sentences) {
-    if (sciFactRegex.test(line)) {
-      r.facts.push({ text: line.trim(), conf: 0.95 });
-      continue;
-    }
-    // 原解析逻辑保持不变
-    if (line.includes('<fact>')) {
-      const conf = (line.match(/conf:([\d.]+)/) || [,1])[1];
-      const txt  = line.replace(/^\d+\.\s*conf:[\d.]+\s*<fact>(.*)<\/fact>.*/, '$1').trim();
-      if (txt) r.facts.push({ text: txt, conf: parseFloat(conf) });
-    }
-    if (line.includes('<opinion>')) {
-      const conf = (line.match(/conf:([\d.]+)/) || [,1])[1];
-      const txt  = line.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
-      if (txt) r.opinions.push({ text: txt, conf: parseFloat(conf) });
-    }
+  /* 前端保底注入 */
+  if (!md.trim().endsWith('Summary:')) {
+    r.facts  = [{text:'Parse truncated by length.',conf:0.5}];
+    r.opinions=[{text:'Parse truncated by length.',conf:0.5}];
+    r.publisher='Reduce input or increase max_tokens.';
+    r.pr='We are investigating the issue. [DATE]';
+    r.summary='Parse truncated.';
+    return r;
   }
 
+  /* 正常解析 */
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
+  const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
+  if (fBlock) {
+    r.facts = fBlock[1].split('\n')
+             .filter(l => l.includes('<fact>'))
+             .map(l => {
+               const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
+               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact>(.*)<\/fact>.*/, '$1').trim();
+               return { text: txt, conf: parseFloat(conf) };
+             });
+  }
+  const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
+  if (oBlock) {
+    r.opinions = oBlock[1].split('\n')
+              .filter(l => l.includes('<opinion>'))
+              .map(l => {
+                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
+                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
+                return { text: txt, conf: parseFloat(conf) };
+              });
+  }
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
