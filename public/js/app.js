@@ -181,7 +181,7 @@ async function fetchContent(raw){
 async function analyzeContent(content, title){
   const prompt = `System:
 You are FactLens, an impartial English-content auditor.
-Output MUST follow the MACHINE-FORM below; missing blanks = broken parser.
+Output MUST follow the MACHINE-FORM below; missing blanks = parser error.
 
 WORD POOL emotional:
 moron,idiot,dumbass,jackass,scumbag,prick,tosser,wanker,muppet,pillock,git,plonker,bogan,drongo,yobbo,galah,knobhead,bellend,nonce,ratbag,bloody idiot,clown,joke,laughing stock,disgrace,embarrassment,pathetic,clueless,brainless,thick,dim,dense,delusional,paranoid,hack,shill,grifter,conman,fraud,liar,cheat,snake,weasel,rat,cockroach,parasite,leech,bottom-feeder,scum,trash,garbage,dumpster fire,train wreck,basket case,joke of a leader,waste of space,oxygen thief,stain,blight,cancer
