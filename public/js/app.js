@@ -46,84 +46,7 @@ function listConf(ul, arr){
     let cls = '';
     if (c >= 0.8) cls = 'conf-high';
     else if (c >= 0.5) cls = 'conf-mid';
-    else cls = 'conf-low';
-    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
-  }).join('');
-}
-function bias(ul, b){
-  ul.innerHTML = `
-    <li>Emotional words: ${b.emotional}</li>
-    <li>Binary opposition: ${b.binary}</li>
-    <li>Mind-reading: ${b.mind}</li>
-    <li>Logical fallacy: ${b.fallacy}</li>
-    <li>Overall stance: ${b.stance}</li>
-  `;
-}
-function showSummary(txt){
-  ui.summary.textContent = txt;
-  ui.summary.classList.remove('hidden');
-}
-
-/* 进度条 */
-let pctTick = null;
-function showProgress(){
-  if (pctTick) clearInterval(pctTick);
-  ui.progress.classList.remove('hidden');
-  ui.fourDim.classList.add('hidden');
-  ui.results.classList.add('hidden');
-  ui.summary.classList.add('hidden');
-  $('#pct').textContent = '0';
-  $('#progressInner').style.width = '0%';
-  let pct = 0;
-  pctTick = setInterval(() => {
-    pct += 2;
-    if (pct > 99) pct = 99;
-    $('#pct').textContent = pct;
-    $('#progressInner').style.width = Math.min(pct, 100) + '%';
-  }, 120);
-}
-function hideProgress(){
-  clearInterval(pctTick);
-  pctTick = null;
-  ui.progress.classList.add('hidden');
-}
-
-/* 四维度条形图 */
-function drawBars({ transparency, factDensity, emotion, consistency }){
-  const max = 10;
-  document.getElementById('tsVal').textContent = transparency.toFixed(1);
-  document.getElementById('fdVal').textContent = factDensity.toFixed(1);
-  document.getElementById('ebVal').textContent = emotion.toFixed(1);
-  document.getElementById('csVal').textContent = consistency.toFixed(1);
-  document.getElementById('tsBar').style.width = `${(transparency / max) * 100}%`;
-  document.getElementById('fdBar').style.width = `${(factDensity / max) * 100}%`;
-  document.getElementById('ebBar').style.width = `${(emotion / max) * 100}%`;
-  document.getElementById('csBar').style.width = `${(consistency / max) * 100}%`;
-}
-
-/* 雷达图展开/收起 */
-ui.radarTgl.addEventListener('click', () => {
-  const isHidden = ui.radarEl.classList.contains('hidden');
-  ui.radarTgl.textContent = isHidden ? 'Hide Radar Chart' : 'View Radar Chart';
-  ui.radarEl.classList.toggle('hidden', !isHidden);
-  if (isHidden && !radarChart) {
-    const data = [
-      Number(document.getElementById('tsVal').textContent),
-      Number(document.getElementById('fdVal').textContent),
-      Number(document.getElementById('ebVal').textContent),
-      Number(document.getElementById('csVal').textContent)
-    ];
-    drawRadar(data);
-  }
-});
-
-function drawRadar(data){
-  if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
-  if (radarChart) radarChart.destroy();
-  radarChart = new Chart(ui.radarEl, {
-    type:'radar',
-    data:{
-      labels:['Credibility','Fact Density','Neutrality','Consistency'],
+  ells:['Credibility','Fact Density','Neutrality','Consistency'],
       datasets:[{
         label:'Score',
         data: data,
@@ -271,7 +194,8 @@ function parseReport(md){
              .filter(l => l.includes('<fact') && l.includes('conf:'))
              .map(l => {
                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact[^>]*>(.*?)<\/fact>.*/, '$1').trim();
+               // 同时兼容 </fact> 或 <fact> 结尾
+               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact[^>]*>([^<]*)(?:<\/fact>|<fact>)?.*/, '$1').trim();
                return { text: txt, conf: parseFloat(conf) };
              });
   }
@@ -284,7 +208,8 @@ function parseReport(md){
               .filter(l => l.includes('<opinion') && l.includes('conf:'))
               .map(l => {
                 const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion[^>]*>(.*?)<\/opinion>.*/, '$1').trim();
+                // 同时兼容 </opinion> 或 <opinion> 结尾
+                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion[^>]*>([^<]*)(?:<\/opinion>|<opinion>)?.*/, '$1').trim();
                 return { text: txt, conf: parseFloat(conf) };
               });
   }
