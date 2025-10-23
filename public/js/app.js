@@ -46,7 +46,7 @@ function listConf(ul, arr){
     const c = item.conf;
     let cls = '';
     if (c >= 0.8) cls = 'conf-high';
-  else if (c >= 0.5) cls = 'conf-mid';
+    else if (c >= 0.5) cls = 'conf-mid';
     else cls = 'conf-low';
     return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
   }).join('');
@@ -242,7 +242,8 @@ function parseReport(md){
     r.opinions = oBlock[1].split('\n')
               .filter(l => l.includes('<opinion>'))
               .map(l => {
-                const conf = (l.match(/conf:([\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
+                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
+                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
                 return { text: txt, conf: parseFloat(conf) };
               });
   }
