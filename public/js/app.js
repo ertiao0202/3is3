@@ -110,10 +110,10 @@ ui.radarTgl.addEventListener('click', () => {
   ui.radarTgl.textContent = isHidden ? 'Hide Radar Chart' : 'View Radar Chart';
   if (isHidden && !radarChart) { /* 首次展开才绘制 */
     const data = [
-      +document.getElementById('tsVal').textContent,
-      +document.getElementById('fdVal').textContent,
-      +document.getElementById('ebVal').textContent,
-      +document.getElementById('csVal').textContent
+      Number(document.getElementById('tsVal').textContent),
+      Number(document.getElementById('fdVal').textContent),
+      Number(document.getElementById('ebVal').textContent),
+      Number(document.getElementById('csVal').textContent)
     ];
     drawRadar(data);
   }
