@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FactLens – Instant Article Bias Check</title>
   <link rel="stylesheet" href="/css/main.css" />
+<base target="_blank">
 </head>
 <body>
   <div id="app">
-    <!-- Top Nav -->
+    <!-- 顶部导航 -->
     <header class="top-bar">
       <div class="inner">
         <div class="logo">FactLens</div>
@@ -19,7 +20,7 @@
       </div>
     </header>
 
-    <!-- Main -->
+    <!-- 主区 -->
     <main class="wrapper">
       <div class="hero">
         <h1 class="hero__title">
@@ -29,13 +30,13 @@
         <p class="hero__sub">Cut the noise. Know the real.</p>
       </div>
 
-      <!-- Input -->
+      <!-- 输入区：同高网格 -->
       <section class="input-area same-height">
         <textarea id="urlInput" class="input input--capsule" rows="2" placeholder="Drop article or link → hit Enter"></textarea>
         <button id="analyzeBtn" class="btn btn--primary">Analyze</button>
       </section>
 
-      <!-- Progress -->
+      <!-- 进度条 -->
       <div id="progress" class="progress hidden">
         <span class="progress__txt">Analyzing&nbsp;<span id="pct">0</span>%</span>
         <div class="progress__bar">
@@ -45,9 +46,10 @@
 
       <div id="summary" class="summary hidden"></div>
 
-      <!-- 4-D Breakdown -->
+      <!-- 4-D 标题 -->
       <section id="fourDim" class="full-row hidden">
         <h2 style="margin-bottom:1rem;font-size:1.5rem;font-weight:700;color:#111827;">4-Dimension Breakdown</h2>
+        <!-- 四维度条形图 -->
         <div class="bar-group">
           <div class="bar-item">
             <div class="bar-label">Source Credibility</div>
@@ -71,75 +73,27 @@
           </div>
         </div>
 
+        <!-- 雷达图折叠区 -->
         <div class="summary__radar" id="radarToggle">View Radar Chart</div>
         <canvas id="radar" class="hidden" height="220"></canvas>
-
-        <!-- Score Explanation -->
-        <details class="glossary" id="scoreGloss">
-          <summary>How we scored this article</summary>
-          <dl>
-            <dt>Source Credibility</dt>
-            <dd>0-10. We check the site's track record, author bio, and outside links. Higher is better.</dd>
-
-            <dt>Fact Density</dt>
-            <dd>0-10. More sentences that can be proven = higher score.</dd>
-
-            <dt>Emotional Neutrality</dt>
-            <dd>0-10. Starts at 10, loses points for insults, fear words, or "us vs. them" talk.</dd>
-
-            <dt>Consistency</dt>
-            <dd>0-10. Average of the three scores above. It shows how steady the article stays.</dd>
-          </dl>
-        </details>
       </section>
 
-      <!-- Results Cards -->
+      <!-- 结果卡片 -->
       <div id="results" class="results hidden">
-        <div class="card card--fact">
-          <h3>Facts <span class="help" data-popover="factHelp">ⓘ</span></h3>
-          <ul id="factList"></ul>
-        </div>
-        <div class="card card--opinion">
-          <h3>Opinions <span class="help" data-popover="opinionHelp">ⓘ</span></h3>
-          <ul id="opinionList"></ul>
-        </div>
-        <div class="card card--bias">
-          <h3>Signs of Bias <span class="help" data-popover="biasHelp">ⓘ</span></h3>
-          <ul id="biasList"></ul>
-        </div>
-        <div class="card">
-          <h3>Publisher Tip</h3>
-          <p id="pubAdvice"></p>
-        </div>
-        <div class="card">
-          <h3>PR Reply</h3>
-          <p id="prAdvice"></p>
-        </div>
+        <div class="card card--fact"><h3>Facts</h3><ul id="factList"></ul></div>
+        <div class="card card--opinion"><h3>Opinions</h3><ul id="opinionList"></ul></div>
+        <div class="card card--bias"><h3>Signs of Bias</h3><ul id="biasList"></ul></div>
+        <div class="card"><h3>Publisher Tip</h3><p id="pubAdvice"></p></div>
+        <div class="card"><h3>PR Reply</h3><p id="prAdvice"></p></div>
       </div>
     </main>
 
-    <!-- Footer -->
+    <!-- 页脚 -->
     <footer class="footer">
       <a href="/privacy.html">Privacy Policy</a>
       <a href="/terms.html">Terms of Service</a>
     </footer>
   </div>
-
-  <!-- Help content templates -->
-  <template id="factHelp">
-    <p>Sentences that can be checked with evidence. Color = confidence.</p>
-  </template>
-  <template id="opinionHelp">
-    <p>Sentences that show belief, forecast, or value judgment.</p>
-  </template>
-  <template id="biasHelp">
-    <ul>
-      <li><strong>Emotional words</strong> – insults or scare words</li>
-      <li><strong>Binary opposition</strong> – "us vs. them" labels</li>
-      <li><strong>Mind-reading</strong> – guessing motives with no proof</li>
-      <li><strong>Logical fallacy</strong> – slippery slope, straw man, etc.</li>
-    </ul>
-  </template>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="/js/app.js" type="module"></script>
