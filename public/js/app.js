@@ -218,7 +218,7 @@ Bias:
 - Stance: neutral/leaning/critical X%
 
 Publisher tip: xxx (verb-first, ≤100)
-PR tip: xxx (≤30 words)   # <= 已删掉 include [DATE]
+PR tip: xxx (≤30 words)   # <= 已删掉 [DATE]
 
 Summary: xxx (≤20 words)
 
@@ -229,6 +229,8 @@ Confidence rule (must obey):
 - 0.30-0.49: partly disputed, weak evidence
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
+
+每条必须以「序号. conf:0.XX <fact>」或「序号. conf:0.XX <opinion>」开头，conf:0.XX 不可省略！
 
 Text:
 ${content}`;
@@ -286,13 +288,8 @@ function parseReport(md){
   if (pub) r.publisher = pub[1].trim();
   if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
 
-  /* ====  彻底去掉日期  ==== */
   const pr  = md.match(/PR tip:\s*(.+?)\s*(?:Summary|$)/);
-  if (pr) {
-    r.pr = pr[1]
-          .split('[DATE]')[0]   // 砍掉 [DATE] 及之后
-          .trim();
-  }
+  if (pr) r.pr = pr[1].split('[DATE]')[0].trim();  // 去掉日期
   if (!r.pr) r.pr = '(保底) PR reply not generated';
 
   const sum = md.match(/Summary:\s*(.+)/);
