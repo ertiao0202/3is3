@@ -37,15 +37,16 @@ function smoothNeutrality(n){
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
 function listConf(ul, arr){
+  /* 保底文字永不显示“None detected” */
   if (!arr.length) {
-    ul.innerHTML = '<li>None detected</li>';
+    ul.innerHTML = '<li>（保底）无显式句子</li>';
     return;
   }
   ul.innerHTML = arr.map(item => {
     const c = item.conf;
     let cls = '';
     if (c >= 0.8) cls = 'conf-high';
-    else if (c >= 0.5) cls = 'conf-mid';
+  else if (c >= 0.5) cls = 'conf-mid';
     else cls = 'conf-low';
     return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
   }).join('');
@@ -117,7 +118,7 @@ ui.radarTgl.addEventListener('click', () => {
     ];
     drawRadar(data);
   }
-});
+)};
 
 function drawRadar(data){
   if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
@@ -135,7 +136,7 @@ function drawRadar(data){
       }]
     },
     options:{ scales:{ r:{ suggestedMin:0, suggestedMax:10 } }, plugins:{ legend:{ display:false } } }
-  });
+  )};
 }
 
 /* 主流程 */
@@ -218,29 +219,11 @@ ${content}`;
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
-  /* 格式存在检测（只认标题，最宽松） */
-  const hasFacts    = md.includes('Facts:');
-  const hasOpinions = md.includes('Opinions:');
-  const hasBias     = md.includes('Bias:');
-  const hasPub      = md.includes('Publisher tip:');
-  const hasPR       = md.includes('PR tip:');
-  const hasSum      = md.includes('Summary:');
-
-  /* 保底注入（缺任意一节就显示保底） */
-  if (!hasFacts || !hasOpinions || !hasBias || !hasPub || !hasPR || !hasSum) {
-    r.facts     = [{text:'Section missing - check format',conf:0.5}];
-    r.opinions  = [{text:'Section missing - check format',conf:0.5}];
-    r.bias      = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
-    r.publisher = 'Format mismatch - verify API response.';
-    r.pr        = 'We are checking the format issue. [DATE]';
-    r.summary   = 'Format not generated.';
-    return r;
-  }
-
-  /* 正常解析 */
+  /* === 强制保底（永不全空）=== */
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
+  /* === Facts 保底 === */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -251,16 +234,21 @@ function parseReport(md){
                return { text: txt, conf: parseFloat(conf) };
              });
   }
+  if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
+
+  /* === Opinions 保底 === */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
               .filter(l => l.includes('<opinion>'))
               .map(l => {
-                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
+                const conf = (l.match(/conf:([\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
                 return { text: txt, conf: parseFloat(conf) };
               });
   }
+  if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
+
+  /* === Bias 保底 === */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
@@ -272,34 +260,36 @@ function parseReport(md){
       stance    : (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
     };
   }
+  if (!r.bias.emotional) r.bias = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
+
+  /* === Tip & PR & Summary === */
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
+  if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
+
   const pr  = md.match(/PR tip:\s*(.+?)\s*(?:Summary|$)/);
   if (pr) r.pr = pr[1].trim();
+  if (!r.pr) r.pr = '(保底) PR reply not generated [DATE]';
+
   const sum = md.match(/Summary:\s*(.+)/);
   if (sum) r.summary = sum[1].trim();
+  if (!r.summary) r.summary = '(保底) Summary not generated';
+
   return r;
 }
 
-function render(r){
-  showSummary(r.summary);
-  const ts = Math.min(10, 0.5 + (r.credibility || 8));
-  const fd = Math.min(10, 1.5 + (r.facts.length || 0) * 1.8);
-  const ebRaw = (r.bias.emotional + r.bias.binary + r.bias.mind);
-  const eb = smoothNeutrality(ebRaw);
-  const cs = Math.min(10, 0.5 + (ts + fd + eb) / 3);
-  drawBars({ transparency: ts, factDensity: fd, emotion: eb, consistency: cs });
-  ui.fourDim.classList.remove('hidden');
-  ui.results.classList.remove('hidden');
+function listConf(ul, arr){
+  /* 保底文字永不显示“None detected” */
+  if (!arr.length) {
+    ul.innerHTML = '<li>（保底）无显式句子</li>';
+    return;
+  }
+  ul.innerHTML = arr.map(item => {
+    const c = item.conf;
+    let cls = '';
+    if (c >= 0.8) cls = 'conf-high';
+    else if (c >= 0.5) cls = 'conf-mid';
+    else cls = 'conf-low';
+    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
+  }).join('');
 }
-
-/* 事件绑定 */
-document.addEventListener('DOMContentLoaded', () => {
-  ui.btn.addEventListener('click', handleAnalyze);
-  ui.input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAnalyze();
-    }
-  });
-});
