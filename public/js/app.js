@@ -283,19 +283,3 @@ function parseReport(md){
 
   return r;
 }
-
-function listConf(ul, arr){
-  /* 保底文字永不显示“None detected” */
-  if (!arr.length) {
-    ul.innerHTML = '<li>（保底）无显式句子</li>';
-    return;
-  }
-  ul.innerHTML = arr.map(item => {
-    const c = item.conf;
-    let cls = '';
-    if (c >= 0.8) cls = 'conf-high';
-    else if (c >= 0.5) cls = 'conf-mid';
-    else cls = 'conf-low';
-    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
-  }).join('');
-}
