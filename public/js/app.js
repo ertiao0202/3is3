@@ -14,10 +14,10 @@ const ui = {
   fourDim : $('#fourDim'),
   results : $('#results'),
   fact    : $('#factList'),
-  opinion : $('#opinionList'),
-  bias    : $('#biasList'),
+  opinion : $('#opinionList)',
+  bias    : $('#biasList)',
   pub     : $('#pubAdvice'),
-  pr      : $('#prAdvice'),
+  pr      : $('#prAdvice)',
   radarEl : $('#radar'),
   radarTgl: $('#radarToggle')
 };
@@ -41,13 +41,16 @@ function listConf(ul, arr){
     ul.innerHTML = '<li>（保底）无显式句子</li>';
     return;
   }
+  /* ==========  只改这里：把百分比显性写出来  ========== */
   ul.innerHTML = arr.map(item => {
     const c = item.conf;
     let cls = '';
     if (c >= 0.8) cls = 'conf-high';
     else if (c >= 0.5) cls = 'conf-mid';
     else cls = 'conf-low';
-    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">${item.text}</li>`;
+    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">
+              ${item.text}<span style="font-size:0.8em;color:#666;margin-left:4px;">${(c*100).toFixed(0)}%</span>
+            </li>`;
   }).join('');
 }
 function bias(ul, b){
@@ -237,8 +240,11 @@ Confidence rule (must obey):
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
 
-===JSON===
-{"facts":[{"text":"...","conf":0.XX},...],"opinions":[{"text":"...","conf":0.XX},...],"emotional":N}
+【死命令】
+Facts 与 Opinions 每条必须写成：
+"1. conf:0.XX <fact>内容</fact>"
+"1. conf:0.XX <opinion>内容</opinion>"
+若缺少 conf:0.XX 或标签格式错误，**视为未完成任务**，请立即返回 "FORMAT_ERROR" 并终止。
 
 Text:
 ${content}`;
@@ -250,26 +256,6 @@ ${content}`;
 }
 
 function parseReport(md){
-  /* ---- 先切 JSON 段（兜底）---- */
-  const jsonMatch = md.match(/===JSON===\s*(\{[\s\S]*?\})/);
-  if (jsonMatch){
-    try{
-      const json = JSON.parse(jsonMatch[1]);
-      return {
-        facts:    json.facts    || [{text:'JSON无事实',conf:0}],
-        opinions: json.opinions || [{text:'JSON无观点',conf:0}],
-        bias:     {emotional:json.emotional||0,binary:0,mind:0,fallacy:0,stance:'unknown'},
-        summary:'JSON兜底',
-        publisher:'(JSON)',
-        pr:'(JSON)',
-        credibility:5
-      };
-    }catch(e){
-      console.warn('JSON解析失败',e);
-    }
-  }
-
-  /* ---- 原正则兜底 ---- */
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
