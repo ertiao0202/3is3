@@ -230,11 +230,11 @@ Confidence rule (must obey):
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
 
-【强制格式】
+【死命令】
 Facts 与 Opinions 每条必须写成：
 "1. conf:0.XX <fact>内容</fact>"
 "1. conf:0.XX <opinion>内容</opinion>"
-若缺少 conf:0.XX 或标签格式错误，视为未完成任务。
+若缺少 conf:0.XX 或标签格式错误，**视为未完成任务**，请立即返回 "FORMAT_ERROR" 并终止。
 
 Text:
 ${content}`;
@@ -246,11 +246,25 @@ ${content}`;
 }
 
 function parseReport(md){
+  /* ---- 格式错误兜底 ---- */
+  if (md.includes('FORMAT_ERROR')){
+    return {
+      facts:    [{text:'格式错误：后端未返回置信度', conf:0}],
+      opinions: [{text:'格式错误：后端未返回置信度', conf:0}],
+      bias:     {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'},
+      summary:  '格式错误',
+      publisher:'(格式错误)',
+      pr:       '(格式错误)',
+      credibility: 0
+    };
+  }
+
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
+  /* ---- Facts ---- */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -263,6 +277,7 @@ function parseReport(md){
   }
   if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
 
+  /* ---- Opinions ---- */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
@@ -275,6 +290,7 @@ function parseReport(md){
   }
   if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
 
+  /* ---- Bias ---- */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
