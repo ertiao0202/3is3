@@ -218,7 +218,7 @@ Bias:
 - Stance: neutral/leaning/critical X%
 
 Publisher tip: xxx (verb-first, ≤100)
-PR tip: xxx (≤30 words)   # <= 已删掉 [DATE]
+PR tip: xxx (≤30 words)
 
 Summary: xxx (≤20 words)
 
@@ -230,6 +230,7 @@ Confidence rule (must obey):
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
 
+【格式死命令】
 每条必须以「序号. conf:0.XX <fact>」或「序号. conf:0.XX <opinion>」开头，conf:0.XX 不可省略！
 
 Text:
@@ -247,30 +248,33 @@ function parseReport(md){
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
+  /* ====  Facts  ==== */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
-             .filter(l => l.includes('<fact>'))
+             .filter(l => l.includes('<fact') && l.includes('conf:'))
              .map(l => {
                const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact>(.*)<\/fact>.*/, '$1').trim();
+               const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<fact[^>]*>(.*?)<\/fact>.*/, '$1').trim();
                return { text: txt, conf: parseFloat(conf) };
              });
   }
   if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
 
+  /* ====  Opinions  ==== */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
-              .filter(l => l.includes('<opinion>'))
+              .filter(l => l.includes('<opinion') && l.includes('conf:'))
               .map(l => {
                 const conf = (l.match(/conf:([\d.]+)/) || [,1])[1];
-                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion>(.*)<\/opinion>.*/, '$1').trim();
+                const txt  = l.replace(/^\d+\.\s*conf:[\d.]+\s*<opinion[^>]*>(.*?)<\/opinion>.*/, '$1').trim();
                 return { text: txt, conf: parseFloat(conf) };
               });
   }
   if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
 
+  /* ====  Bias  ==== */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
@@ -289,7 +293,7 @@ function parseReport(md){
   if (!r.publisher) r.publisher = '(保底) Publisher tip not generated';
 
   const pr  = md.match(/PR tip:\s*(.+?)\s*(?:Summary|$)/);
-  if (pr) r.pr = pr[1].split('[DATE]')[0].trim();  // 去掉日期
+  if (pr) r.pr = pr[1].split('[DATE]')[0].trim();
   if (!r.pr) r.pr = '(保底) PR reply not generated';
 
   const sum = md.match(/Summary:\s*(.+)/);
