@@ -237,11 +237,8 @@ Confidence rule (must obey):
 - 0.10-0.29: highly speculative, model completion
 - 0.00-0.09: almost no basis, pure assumption
 
-【死命令】
-Facts 与 Opinions 每条必须写成：
-"1. conf:0.XX <fact>内容</fact>"
-"1. conf:0.XX <opinion>内容</opinion>"
-若缺少 conf:0.XX 或标签格式错误，**视为未完成任务**，请立即返回 "FORMAT_ERROR" 并终止。
+===JSON===
+{"facts":[{"text":"...","conf":0.XX},...],"opinions":[{"text":"...","conf":0.XX},...],"emotional":N}
 
 Text:
 ${content}`;
@@ -253,25 +250,31 @@ ${content}`;
 }
 
 function parseReport(md){
-  /* ---- 格式错误兜底 ---- */
-  if (md.includes('FORMAT_ERROR')){
-    return {
-      facts:    [{text:'格式错误：后端未返回置信度', conf:0}],
-      opinions: [{text:'格式错误：后端未返回置信度', conf:0}],
-      bias:     {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'},
-      summary:  '格式错误',
-      publisher:'(格式错误)',
-      pr:       '(格式错误)',
-      credibility: 0
-    };
+  /* ---- 先切 JSON 段（兜底）---- */
+  const jsonMatch = md.match(/===JSON===\s*(\{[\s\S]*?\})/);
+  if (jsonMatch){
+    try{
+      const json = JSON.parse(jsonMatch[1]);
+      return {
+        facts:    json.facts    || [{text:'JSON无事实',conf:0}],
+        opinions: json.opinions || [{text:'JSON无观点',conf:0}],
+        bias:     {emotional:json.emotional||0,binary:0,mind:0,fallacy:0,stance:'unknown'},
+        summary:'JSON兜底',
+        publisher:'(JSON)',
+        pr:'(JSON)',
+        credibility:5
+      };
+    }catch(e){
+      console.warn('JSON解析失败',e);
+    }
   }
 
+  /* ---- 原正则兜底 ---- */
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
 
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
-  /* ---- Facts ---- */
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
   if (fBlock) {
     r.facts = fBlock[1].split('\n')
@@ -284,7 +287,6 @@ function parseReport(md){
   }
   if (!r.facts.length) r.facts = [{text:'(保底) No explicit facts detected',conf:0.5}];
 
-  /* ---- Opinions ---- */
   const oBlock = md.match(/Opinions:([\s\S]*?)Bias:/);
   if (oBlock) {
     r.opinions = oBlock[1].split('\n')
@@ -297,7 +299,6 @@ function parseReport(md){
   }
   if (!r.opinions.length) r.opinions = [{text:'(保底) No explicit opinions detected',conf:0.5}];
 
-  /* ---- Bias ---- */
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
