@@ -1,6 +1,6 @@
 /* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
-const url = '/api/chat';   // ← 只调本地 /api/chat，由 Vercel 函数转发到 Kimi
+const url = '/api/chat';   // 只走本地 /api/chat，由 Vercel 函数转发到 Kimi
 
 let radarChart;
 let isAnalyzing = false;
@@ -141,8 +141,8 @@ function render(r){
   drawBars({
     transparency : smoothNeutrality(r.credibility),
     factDensity  : r.facts.length  * 1.2,
-    emotion      : 10 - r.bias.emotional * 0.5,
-    consistency  : 10 - r.bias.fallacy  * 0.8
+    emotion      : Math.max(0, 10 - (r.bias.emotional || 0) * 2), // 可调系数
+    consistency  : 10 - (r.bias.fallacy || 0) * 0.8
   });
   listConf(ui.fact,    r.facts);
   listConf(ui.opinion, r.opinions);
@@ -197,7 +197,8 @@ async function fetchContent(raw){
 
 async function analyzeContent(content, title){
   const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
-Output exactly:
+You must strictly follow the output format below and keep the order.
+
 Title: ${title}
 Credibility: X/10 (one sentence)
 
@@ -210,20 +211,28 @@ Opinions:
 … (≥1)
 
 Bias:
-- Emotional: N conf:0.XX eg:<eg>…</eg>
-- Binary: N conf:0.XX eg:<eg>…</eg>
-- Mind-reading: N conf:0.XX eg:<eg>…</eg>
-- Fallacy: N conf:0.XX type:<type>…</type> eg:<eg>…</eg>
+- Emotional: N  conf:0.XX
+- Binary: N     conf:0.XX
+- Mind-reading: N conf:0.XX
+- Fallacy: N    conf:0.XX
 - Stance: neutral/leaning/critical X%
 
 Publisher tip: xxx (verb-first, ≤100)
 PR tip: xxx (≤30 words, include [DATE])
 Summary: xxx (≤20 words)
 
+Confidence rule (must obey):
+- 0.95-1.00: direct from official docs, public reports, laws
+- 0.80-0.94: credible third-party source, simple calculation
+- 0.50-0.79: widely accepted but no primary source
+- 0.30-0.49: partly disputed, weak evidence
+- 0.10-0.29: highly speculative, model completion
+- 0.00-0.09: almost no basis, pure assumption
+
 Text:
 ${content}`;
 
-  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1200 };
+  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1500 };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
@@ -232,6 +241,7 @@ ${content}`;
 
 function parseReport(md){
   const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
+
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
 
@@ -263,11 +273,11 @@ function parseReport(md){
   if (bBlock){
     const b = bBlock[1];
     r.bias = {
-      emotional : (b.match(/Emotional words:\s*(\d+)/)||[,0])[1],
-      binary    : (b.match(/Binary opposition:\s*(\d+)/)||[,0])[1],
+      emotional : (b.match(/Emotional:\s*(\d+)/)||[,0])[1],
+      binary    : (b.match(/Binary:\s*(\d+)/)||[,0])[1],
       mind      : (b.match(/Mind-reading:\s*(\d+)/)||[,0])[1],
-      fallacy   : (b.match(/Logical fallacy:\s*(\d+)/)||[,0])[1],
-      stance    : (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
+      fallacy   : (b.match(/Fallacy:\s*(\d+)/)||[,0])[1],
+      stance    : (b.match(/Stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
     };
   }
   if (!r.bias.emotional) r.bias = {emotional:0,binary:0,mind:0,fallacy:0,stance:'unknown'};
@@ -287,7 +297,7 @@ function parseReport(md){
   return r;
 }
 
-/* ========== 事件绑定 ========== */
+/* 事件绑定 */
 window.addEventListener('DOMContentLoaded', () => {
   ui.btn.addEventListener('click', () => {
     console.log('【2】click 事件已触发');
