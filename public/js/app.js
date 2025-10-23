@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM) */ 
+/* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -30,7 +30,7 @@ tx.addEventListener('input', () => {
 });
 
 /* 工具函数 */
-function smoothNeutrality(n = 0){
+function smoothNeutrality(n){
   if (n <= 2)  return 10 - n * 0.5;
   if (n <= 5)  return 9   - (n - 2) * 1.2;
   if (n <= 9)  return 5.4 - (n - 5) * 0.9;
@@ -179,64 +179,74 @@ async function fetchContent(raw){
 }
 
 async function analyzeContent(content, title){
-  const prompt = `System:
-You are FactLens, an impartial English-content auditor.
-Output MUST follow the MACHINE-FORM below; missing blanks = parser error.
+  const prompt = `Role: You are "FactLens", a fact-opinion-bias detector.
+Output MUST follow the structure below; otherwise the parser will break.
+Steps:
+1. Summarize the core message in ≤25 words.
+2. Split sentences; tag each as <fact> or <opinion>.
+   For every sentence, prepend conf:0.XX (XX=confidence 00-99, no decimals beyond 2).
+3. Count bias signals:
+   a) Emotional words: only **attack/derogatory** sentiment (exclude praise, wonder, joy).
+   b) Binary opposition: **hostile labels** (us-vs-them, enemy, evil, traitor, etc.).
+   c) Mind-reading: claims about **motives/intentions** without evidence.
+   d) Logical fallacy: classic types (slippery slope, straw man, ad hominem, etc.).
+   For each category, give **confidence 0-1** and **original snippet**.
+4. One actionable publisher tip (verb-first, ≤100 chars).
+5. One ≤30-word PR reply (with data/date/source).
+6. ≤20-word third-person summary (no "author"/"this article").
 
-WORD POOL emotional:
-moron,idiot,dumbass,jackass,scumbag,prick,tosser,wanker,muppet,pillock,git,plonker,bogan,drongo,yobbo,galah,knobhead,bellend,nonce,ratbag,bloody idiot,clown,joke,laughing stock,disgrace,embarrassment,pathetic,clueless,brainless,thick,dim,dense,delusional,paranoid,hack,shill,grifter,conman,fraud,liar,cheat,snake,weasel,rat,cockroach,parasite,leech,bottom-feeder,scum,trash,garbage,dumpster fire,train wreck,basket case,joke of a leader,waste of space,oxygen thief,stain,blight,cancer
-
-WORD POOL binary:
-enemy of the people,enemy of the state,traitor,treasonous,un-American,anti-American,un-Australian,un-British,anti-vax,climate denier,libtard,republitard,demorat,RINO,DINO,leftard,rightard,socialist scum,commie,Marxist,fascist,Nazi,Hitler wannabe,Stalinist,dictator-lover,Putin puppet,CCP shill,Beijing stooge,Brussels puppet,globalist elite,coastal elite,beltway insider,deep state,swamp creature,champagne socialist,chardonnay socialist,latte-sipping lefty,inner-city greenie,Tory scum,Labour parasite
-
-INSTRUCTIONS:
-1. Core message ≤25 words, third-person, no "the author/article".
-2. Split sentences; tag each as <fact> or <opinion> and prepend conf:0.XX.
-3. For bias signals:
-   a) Copy words/phrases you find from POOL above.
-   b) Fill them into the blanks below; leave blank = none found.
-4. Credibility 0–10 (5 = average news).
-5. Publisher tip ≤80 chars, verb-first.
-6. PR reply ≤30 words, include [DATE].
-7. Summary ≤20 words, neutral.
-
-MACHINE-FORM (do not change format or remove blanks):
------
-Core: _________________________
-Credibility: ___
+Template:
+Title: ${title}
+Credibility: X/10 (one sentence)
 
 Facts:
 1. conf:0.XX <fact>sentence</fact>
-...
+…
 
 Opinions:
 1. conf:0.XX <opinion>sentence</opinion>
-...
+…
 
 Bias:
-emotional: ___/___/|________1________|________2________|________3________|________4________|________5________|
-binary: ___/___/|________1________|________2________|________3________|________4________|________5________|
-mind: ___/___/|________1________|________2________|________3________|________4________|________5________|
-fallacy: ___/___/____/|________1________|________2________|________3________|________4________|________5________|
-stance: _____________
+- Emotional words: N  conf:0.XX  eg: <eg>snippet</eg>
+- Binary opposition: N  conf:0.XX  eg: <eg>snippet</eg>
+- Mind-reading: N  conf:0.XX  eg: <eg>snippet</eg>
+- Logical fallacy: N  conf:0.XX  type:<type>slippery/straw/ad hom</type>  eg: <eg>snippet</eg>
+- Overall stance: neutral/leaning/critical X%
 
-Tip: _________________________
-PR: _________________________
-Summary: _________________________
------
+Publisher tip:
+xxx
 
-Title: ${title}
+PR tip:
+xxx
+
+Summary:
+xxx
+
 Text:
 ${content}`;
-  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0.15, max_tokens:1200 };
-  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-  if (!res.ok) { const t = await res.text(); throw new Error(t); }
+
+  // 只改模型名 & 地址，其余逻辑不动
+  const body = {
+    model: 'moonshot-v1-8k',          // 锁定 8k
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.15,
+    max_tokens: 1200,
+  };
+
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
   const json = await res.json();
   return parseReport(json.choices[0].message.content);
 }
 
 function parseReport(md){
-  const r = { facts:[], opinions:[], bias:{ emotional:0, binary:0, mind:0, fallacy:0, stance:'neutral 0%' }, summary:'', publisher:'', pr:'', credibility:8 };
+  const r = { facts:[], opinions:[], bias:{}, summary:'', publisher:'', pr:'', credibility:8 };
   const cred = md.match(/Credibility:\s*(\d+(?:\.\d+)?)\s*\/\s*10/);
   if (cred) r.credibility = parseFloat(cred[1]);
   const fBlock = md.match(/Facts:([\s\S]*?)Opinions:/);
@@ -262,16 +272,13 @@ function parseReport(md){
   const bBlock = md.match(/Bias:([\s\S]*?)Publisher tip:/);
   if (bBlock){
     const b = bBlock[1];
-    // 按竖线拆分，filter 空串即命中个数
-    const emoBlk = (b.match(/emotional:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
-    r.bias.emotional = emoBlk.split('|').filter(Boolean).length;
-    const binBlk = (b.match(/binary:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
-    r.bias.binary = binBlk.split('|').filter(Boolean).length;
-    const mindBlk = (b.match(/mind:\s*(\d+)\/([\d.]+)\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
-    r.bias.mind = mindBlk.split('|').filter(Boolean).length;
-    const fallBlk = (b.match(/fallacy:\s*(\d+)\/([\d.]+)\/[^\/]+\/((?:\|[^|\n]+)*)/i) || [,0,0,''])[3];
-    r.bias.fallacy = fallBlk.split('|').filter(Boolean).length;
-    r.bias.stance = (b.match(/stance:\s*(.+?)\s*(?:\n|$)/i) || [, 'neutral'])[1].trim();
+    r.bias = {
+      emotional : (b.match(/Emotional words:\s*(\d+)/)||[,0])[1],
+      binary    : (b.match(/Binary opposition:\s*(\d+)/)||[,0])[1],
+      mind      : (b.match(/Mind-reading:\s*(\d+)/)||[,0])[1],
+      fallacy   : (b.match(/Logical fallacy:\s*(\d+)/)||[,0])[1],
+      stance    : (b.match(/Overall stance:\s*(.+?)\s*(?:\n|$)/)||[, 'neutral 0%'])[1]
+    };
   }
   const pub = md.match(/Publisher tip:\s*(.+?)\s*(?:PR tip|$)/);
   if (pub) r.publisher = pub[1].trim();
@@ -286,7 +293,7 @@ function render(r){
   showSummary(r.summary);
   const ts = Math.min(10, 0.5 + (r.credibility || 8));
   const fd = Math.min(10, 1.5 + (r.facts.length || 0) * 1.8);
-  const ebRaw = (Number(r.bias.emotional) + Number(r.bias.binary) + Number(r.bias.mind));
+  const ebRaw = (r.bias.emotional + r.bias.binary + r.bias.mind);
   const eb = smoothNeutrality(ebRaw);
   const cs = Math.min(10, 0.5 + (ts + fd + eb) / 3);
   drawBars({ transparency: ts, factDensity: fd, emotion: eb, consistency: cs });
