@@ -146,6 +146,7 @@ function drawRadar(data){
 
 /* 主流程 */
 async function handleAnalyze(){
+  console.log('【1】按钮被点到了');
   const raw = ui.input.value.trim();
   if (!raw){ hideProgress(); return; }
 
