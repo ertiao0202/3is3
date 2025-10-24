@@ -189,20 +189,20 @@ async function handleAnalyze(){
   }
 }
 
-async function fetchContent(raw){
-  if (!raw.startsWith('http')) return { content: raw.slice(0,2000), title: 'Pasted text' };
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 10000);
-  try{
-    const res = await fetch(`https://r.jina.ai/${encodeURIComponent(raw)}`, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('jina fetch failed');
-    const txt = await res.text();
-    return { content: txt.slice(0, 2000), title: raw' };
-  }catch(e){
-    clearTimeout(timer);
-    throw e;
-  }
+async function fetchContent(raw) {    
+if (!raw.startsWith('http')) return { content: raw.slice(0, 2000), title: 'Pasted text' };    
+const controller = new AbortController();    
+const timer = setTimeout(() => controller.abort(), 10000);    
+try {        
+const res = await fetch(`https://r.jina.ai/${encodeURIComponent(raw)}`, { signal: controller.signal });        
+clearTimeout(timer);        
+if (!res.ok) throw new Error('jina fetch failed');        
+const txt = await res.text();        
+return { content: txt.slice(0, 2000), title: raw };    
+} catch (e) {        
+clearTimeout(timer);        
+throw e;    
+}
 }
 
 async function analyzeContent(content, title){
