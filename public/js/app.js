@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM) */ 
+/* public/js/app.js  (ESM) */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -36,6 +36,7 @@ function smoothNeutrality(n){
   if (n <= 9)  return 5.4 - (n - 5) * 0.9;
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
+
 /* ========== 短语强度映射 ========== */
 function listConf(ul, arr){
   if (!arr.length) {
@@ -53,6 +54,7 @@ function listConf(ul, arr){
         </li>`;
   }).join('');
 }
+
 function bias(ul, b){
   ul.innerHTML = `
     <li>Emotional words: ${b.emotional}</li>
@@ -60,8 +62,9 @@ function bias(ul, b){
     <li>Mind-reading: ${b.mind}</li>
     <li>Logical fallacy: ${b.fallacy}</li>
     <li>Overall stance: ${b.stance}</li>
-  </li>`;
+  `;
 }
+
 function showSummary(txt){
   ui.summary.textContent = txt;
   ui.summary.classList.remove('hidden');
@@ -85,6 +88,7 @@ function showProgress(){
     $('#progressInner').style.width = Math.min(pct, 100) + '%';
   }, 120);
 }
+
 function hideProgress(){
   clearInterval(pctTick);
   pctTick = null;
@@ -149,18 +153,18 @@ function drawRadar(data){
 /* ========== 把报告画到页面 ========== */
 function render(r){
   drawBars({
-    transparency : smoothNeutrality(r.credibility),
-    fact密度  : r.facts.length  * 1.2,
-    emotion      : Math.max(0, 10 - (r.bias.emotional || 0) * 2),
-    consistency  : 10 - (r.bias.fallacy || 0) * 0.8)
+    transparency: smoothNeutrality(r.credibility),
+    factDensity: r.facts.length * 1.2,
+    emotion: Math.max(0, 10 - (r.bias.emotional || 0) * 2),
+    consistency: 10 - (r.bias.fallacy || 0) * 0.8
   });
-  listConf(ui.fact,    r.facts);
+  listConf(ui.fact, r.facts);
   listConf(ui.opinion, r.opinions);
   bias(ui.bias, r.bias);
   showSummary(r.summary);
   ui.pub.textContent = r.publisher;
-  ui.pr.textContent  : r.pr,
-  ui.fourDim.classList.remove('hidden'),
+  ui.pr.textContent = r.pr;
+  ui.fourDim.classList.remove('hidden');
   ui.results.classList.remove('hidden');
 }
 
@@ -175,7 +179,7 @@ async function handleAnalyze(){
   try {
     const { content, title } = await fetchContent(raw);
     const report = await analyzeContent(content, title);
-    render(r);
+    render(report);
   } catch (e) {
     console.error(e);
     let msg = 'We could not retrieve the page. Please paste text directly.';
@@ -190,19 +194,19 @@ async function handleAnalyze(){
 }
 
 async function fetchContent(raw) {    
-if (!raw.startsWith('http')) return { content: raw.slice(0, 2000), title: 'Pasted text' };    
-const controller = new AbortController();    
-const timer = setTimeout(() => controller.abort(), 10000);    
-try {        
-const res = await fetch(`https://r.jina.ai/${encodeURIComponent(raw)}`, { signal: controller.signal });        
-clearTimeout(timer);        
-if (!res.ok) throw new Error('jina fetch failed');        
-const txt = await res.text();        
-return { content: txt.slice(0, 2000), title: raw };    
-} catch (e) {        
-clearTimeout(timer);        
-throw e;    
-}
+  if (!raw.startsWith('http')) return { content: raw.slice(0, 2000), title: 'Pasted text' };    
+  const controller = new AbortController();    
+  const timer = setTimeout(() => controller.abort(), 10000);    
+  try {        
+    const res = await fetch(`https://r.jina.ai/${encodeURIComponent(raw)}`, { signal: controller.signal });        
+    clearTimeout(timer);        
+    if (!res.ok) throw new Error('jina fetch failed');        
+    const txt = await res.text();        
+    return { content: txt.slice(0, 2000), title: raw };    
+  } catch (e) {        
+    clearTimeout(timer);        
+    throw e;    
+  }
 }
 
 async function analyzeContent(content, title){
@@ -248,23 +252,23 @@ Facts 与 Opinions 每条必须写成：
 
 Text:
 ${content}`;    
-const body = {         
-model: 'moonshot-v1-8k',         
-messages: [{ role: 'user', content: prompt }],         
-temperature: 0,         
-max_tokens: 1500     
-};        
-const res = await fetch(url, {         
-method: 'POST',         
-headers: { 'Content-Type': 'application/json' },         
-body: JSON.stringify(body)     
-});        
-if (!res.ok) {         
-const t = await res.text();         
-throw new Error(t);     
-}        
-const json = await res.json();    
-return parseReport(json.choices[0].message.content);
+  const body = {         
+    model: 'moonshot-v1-8k',         
+    messages: [{ role: 'user', content: prompt }],         
+    temperature: 0,         
+    max_tokens: 1500     
+  };        
+  const res = await fetch(url, {         
+    method: 'POST',         
+    headers: { 'Content-Type': 'application/json' },         
+    body: JSON.stringify(body)     
+  });        
+  if (!res.ok) {         
+    const t = await res.text();         
+    throw new Error(t);     
+  }        
+  const json = await res.json();    
+  return parseReport(json.choices[0].message.content);
 }
 
 function parseReport(md){
