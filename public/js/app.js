@@ -6,7 +6,6 @@ let radarChart;
 let isAnalyzing = false;
 const COOL_DOWN = 1200;
 
-/* ========== 已修复：英文符号、无中文引号 ========== */
 const ui = {
   input   : $('#urlInput'),
   btn     : $('#analyzeBtn'),
@@ -15,10 +14,10 @@ const ui = {
   fourDim : $('#fourDim'),
   results : $('#results'),
   fact    : $('#factList'),
-  opinion : $('#opinionList'),
-  bias    : $('#biasList'),
+  opinion : $('#opinionList)',
+  bias    : $('#biasList)',
   pub     : $('#pubAdvice'),
-  pr      : $('#prAdvice'),
+  pr      : $('#prAdvice)',
   radarEl : $('#radar'),
   radarTgl: $('#radarToggle')
 };
@@ -37,7 +36,7 @@ function smoothNeutrality(n){
   if (n <= 9)  return 5.4 - (n - 5) * 0.9;
   return Math.max(0, 1.2 - (n - 9) * 0.15);
 }
-/* ========== 方案1：文字显性置信度 ========== */
+/* ========== 短语强度映射 ========== */
 function listConf(ul, arr){
   if (!arr.length) {
     ul.innerHTML = '<li>（保底）无显式句子</li>';
@@ -61,7 +60,7 @@ function bias(ul, b){
     <li>Mind-reading: ${b.mind}</li>
     <li>Logical fallacy: ${b.fallacy}</li>
     <li>Overall stance: ${b.stance}</li>
-  `;
+  </li>`;
 }
 function showSummary(txt){
   ui.summary.textContent = txt;
@@ -119,7 +118,7 @@ ui.radarTgl.addEventListener('click', () => {
     ];
     drawRadar(data);
   }
-});
+};
 
 function drawRadar(data){
   if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
@@ -176,7 +175,7 @@ async function handleAnalyze(){
   try {
     const { content, title } = await fetchContent(raw);
     const report = await analyzeContent(content, title);
-    render(report);
+    render(r);
   } catch (e) {
     console.error(e);
     let msg = 'We could not retrieve the page. Please paste text directly.';
@@ -199,7 +198,7 @@ async function fetchContent(raw){
     clearTimeout(timer);
     if (!res.ok) throw new Error('jina fetch failed');
     const txt = await res.text();
-    return { content: txt.slice(0, 2000), title: raw };
+    return { content: txt.slice(0, 2000), title: raw' };
   }catch(e){
     clearTimeout(timer);
     throw e;
@@ -250,7 +249,7 @@ Facts 与 Opinions 每条必须写成：
 Text:
 ${content}`;
   const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1500 };
-  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
   const json = await res.json();
   return parseReport(json.choices[0].message.content);
