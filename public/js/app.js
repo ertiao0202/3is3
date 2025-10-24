@@ -147,7 +147,7 @@ function drawRadar(data){
 }
 
 /* ========== 把报告画到页面 ========== */
-function render{
+function render() {
   drawBars({
     transparency : smoothNeutrality(r.credibility),
     factDensity  : r.facts.length  * 1.2,
