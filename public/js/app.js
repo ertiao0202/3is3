@@ -147,20 +147,20 @@ function drawRadar(data){
 }
 
 /* ========== 把报告画到页面 ========== */
-function render() {
+function render(r){
   drawBars({
     transparency : smoothNeutrality(r.credibility),
-    factDensity  : r.facts.length  * 1.2,
+    fact密度  : r.facts.length  * 1.2,
     emotion      : Math.max(0, 10 - (r.bias.emotional || 0) * 2),
-    consistency  : 10 - (r.bias.fallacy || 0) * 0.8
+    consistency  : 10 - (r.bias.fallacy || 0) * 0.8)
   });
   listConf(ui.fact,    r.facts);
   listConf(ui.opinion, r.opinions);
   bias(ui.bias, r.bias);
   showSummary(r.summary);
   ui.pub.textContent = r.publisher;
-  ui.pr.textContent  = r.pr;
-  ui.fourDim.classList.remove('hidden');
+  ui.pr.textContent  : r.pr,
+  ui.fourDim.classList.remove('hidden'),
   ui.results.classList.remove('hidden');
 }
 
