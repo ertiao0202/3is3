@@ -118,7 +118,7 @@ ui.radarTgl.addEventListener('click', () => {
     ];
     drawRadar(data);
   }
-};
+});
 
 function drawRadar(data){
   if (typeof window.Chart === 'undefined'){ console.warn('Chart.js not loaded'); return; }
