@@ -14,10 +14,10 @@ const ui = {
   fourDim : $('#fourDim'),
   results : $('#results'),
   fact    : $('#factList'),
-  opinion : $('#opinionList)',
+  opinion : $('#opinionList'),
   bias    : $('#biasList'),
   pub     : $('#pubAdvice'),
-  pr      : $('#prAdvice)',
+  pr      : $('#prAdvice'),
   radarEl : $('#radar'),
   radarTgl: $('#radarToggle')
 };
