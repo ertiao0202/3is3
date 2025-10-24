@@ -247,12 +247,24 @@ Facts 与 Opinions 每条必须写成：
 若缺少 conf:0.XX 或标签格式错误，**视为未完成任务**，请立即返回 "FORMAT_ERROR" 并终止。
 
 Text:
-${content}`;
-  const body = { model: 'moonshot-v1-8k', messages:[{role:'user', content:prompt}], temperature:0, max_tokens:1500 };
-  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
-  if (!res.ok) { const t = await res.text(); throw new Error(t); }
-  const json = await res.json();
-  return parseReport(json.choices[0].message.content);
+${content}`;    
+const body = {         
+model: 'moonshot-v1-8k',         
+messages: [{ role: 'user', content: prompt }],         
+temperature: 0,         
+max_tokens: 1500     
+};        
+const res = await fetch(url, {         
+method: 'POST',         
+headers: { 'Content-Type': 'application/json' },         
+body: JSON.stringify(body)     
+});        
+if (!res.ok) {         
+const t = await res.text();         
+throw new Error(t);     
+}        
+const json = await res.json();    
+return parseReport(json.choices[0].message.content);
 }
 
 function parseReport(md){
