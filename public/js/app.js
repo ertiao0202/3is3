@@ -48,8 +48,8 @@ function listConf(ul, arr){
     if (c >= 0.8) cls = 'conf-high';
     else if (c >= 0.5) cls = 'conf-mid';
     else cls = 'conf-low';
-    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">
-          ${item.text}<span style="font-size:0.8em;color:#666;margin-left:4px;">conf: ${(c*100).toFixed(0)}%</span>
+    return `<li class="${cls}" title="confidence ${(c*100).toFixed(0)}%">          
+${item.text}<span style="font-size:0.8em;color:#666;margin-left:4px;">conf: ${(c*100).toFixed(0)}%</span>
         </li>`;
   }).join('');
 }
