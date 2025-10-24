@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM) */
+/* public/js/app.js  (ESM) */ 
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
