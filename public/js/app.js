@@ -15,7 +15,7 @@ const ui = {
   results : $('#results'),
   fact    : $('#factList'),
   opinion : $('#opinionList)',
-  bias    : $('#biasList)',
+  bias    : $('#biasList'),
   pub     : $('#pubAdvice'),
   pr      : $('#prAdvice)',
   radarEl : $('#radar'),
