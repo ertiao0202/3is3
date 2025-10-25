@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM)  Final - 最终修复版 */
+/* public/js/app.js  (ESM)  Final - 完整修复版 */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -68,17 +68,19 @@ function correctEmotionEN(rawEmo, text) {
 
 // 显示进度条
 function showProgress() {
-  ui.progress.classList.remove('hidden');
-  ui.summary.classList.add('hidden');
-  ui.fourDim.classList.add('hidden');
-  ui.results.classList.add('hidden');
-  document.getElementById('pct').textContent = '0';
-  document.getElementById('progressInner').style.width = '0%';
+  if (ui.progress) ui.progress.classList.remove('hidden');
+  if (ui.summary) ui.summary.classList.add('hidden');
+  if (ui.fourDim) ui.fourDim.classList.add('hidden');
+  if (ui.results) ui.results.classList.add('hidden');
+  const pctElement = document.getElementById('pct');
+  const progressInner = document.getElementById('progressInner');
+  if (pctElement) pctElement.textContent = '0';
+  if (progressInner) progressInner.style.width = '0%';
 }
 
 // 隐藏进度条
 function hideProgress() {
-  ui.progress.classList.add('hidden');
+  if (ui.progress) ui.progress.classList.add('hidden');
 }
 
 // 获取网页内容的函数（简化版）
@@ -196,72 +198,90 @@ function render(report) {
     console.log('渲染结果:', report);
     
     // 显示摘要
-    ui.summary.textContent = report.summary || '分析完成';
-    ui.summary.classList.remove('hidden');
+    if (ui.summary) {
+      ui.summary.textContent = report.summary || '分析完成';
+      ui.summary.classList.remove('hidden');
+    }
 
     // 显示四维度
-    if (report.dimensions) {
+    if (ui.fourDim && report.dimensions) {
       ui.fourDim.classList.remove('hidden');
       
       // 更新四维度条形图
-      document.getElementById('tsVal').textContent = report.dimensions.ts.toFixed(1);
-      document.getElementById('fdVal').textContent = report.dimensions.fd.toFixed(1);
-      document.getElementById('ebVal').textContent = report.dimensions.eb.toFixed(1);
-      document.getElementById('csVal').textContent = report.dimensions.cs.toFixed(1);
+      const tsVal = document.getElementById('tsVal');
+      const fdVal = document.getElementById('fdVal');
+      const ebVal = document.getElementById('ebVal');
+      const csVal = document.getElementById('csVal');
+      const tsBar = document.getElementById('tsBar');
+      const fdBar = document.getElementById('fdBar');
+      const ebBar = document.getElementById('ebBar');
+      const csBar = document.getElementById('csBar');
       
-      document.getElementById('tsBar').style.width = `${Math.min(100, report.dimensions.ts * 10)}%`;
-      document.getElementById('fdBar').style.width = `${Math.min(100, report.dimensions.fd * 10)}%`;
-      document.getElementById('ebBar').style.width = `${Math.min(100, report.dimensions.eb * 10)}%`;
-      document.getElementById('csBar').style.width = `${Math.min(100, report.dimensions.cs * 10)}%`;
+      if (tsVal) tsVal.textContent = report.dimensions.ts.toFixed(1);
+      if (fdVal) fdVal.textContent = report.dimensions.fd.toFixed(1);
+      if (ebVal) ebVal.textContent = report.dimensions.eb.toFixed(1);
+      if (csVal) csVal.textContent = report.dimensions.cs.toFixed(1);
+      
+      if (tsBar) tsBar.style.width = `${Math.min(100, report.dimensions.ts * 10)}%`;
+      if (fdBar) fdBar.style.width = `${Math.min(100, report.dimensions.fd * 10)}%`;
+      if (ebBar) ebBar.style.width = `${Math.min(100, report.dimensions.eb * 10)}%`;
+      if (csBar) csBar.style.width = `${Math.min(100, report.dimensions.cs * 10)}%`;
     }
 
     // 清空并填充结果列表
-    ui.fact.innerHTML = '';
-    ui.opinion.innerHTML = '';
-    ui.bias.innerHTML = '';
-    
-    if (report.facts && report.facts.length > 0) {
-      report.facts.forEach(fact => {
+    if (ui.fact) {
+      ui.fact.innerHTML = '';
+      if (report.facts && report.facts.length > 0) {
+        report.facts.forEach(fact => {
+          const li = document.createElement('li');
+          li.textContent = fact;
+          ui.fact.appendChild(li);
+        });
+      } else {
         const li = document.createElement('li');
-        li.textContent = fact;
+        li.textContent = '未检测到明确的事实';
         ui.fact.appendChild(li);
-      });
-    } else {
-      const li = document.createElement('li');
-      li.textContent = '未检测到明确的事实';
-      ui.fact.appendChild(li);
+      }
     }
 
-    if (report.opinions && report.opinions.length > 0) {
-      report.opinions.forEach(op => {
+    if (ui.opinion) {
+      ui.opinion.innerHTML = '';
+      if (report.opinions && report.opinions.length > 0) {
+        report.opinions.forEach(op => {
+          const li = document.createElement('li');
+          li.textContent = op;
+          ui.opinion.appendChild(li);
+        });
+      } else {
         const li = document.createElement('li');
-        li.textContent = op;
+        li.textContent = '未检测到明确的观点';
         ui.opinion.appendChild(li);
-      });
-    } else {
-      const li = document.createElement('li');
-      li.textContent = '未检测到明确的观点';
-      ui.opinion.appendChild(li);
+      }
     }
 
-    if (report.bias && report.bias.length > 0) {
-      report.bias.forEach(b => {
+    if (ui.bias) {
+      ui.bias.innerHTML = '';
+      if (report.bias && report.bias.length > 0) {
+        report.bias.forEach(b => {
+          const li = document.createElement('li');
+          li.textContent = b;
+          ui.bias.appendChild(li);
+        });
+      } else {
         const li = document.createElement('li');
-        li.textContent = b;
+        li.textContent = '未检测到明显的偏见';
         ui.bias.appendChild(li);
-      });
-    } else {
-      const li = document.createElement('li');
-      li.textContent = '未检测到明显的偏见';
-      ui.bias.appendChild(li);
+      }
     }
 
     // 填充发布商建议和公关回复
-    document.getElementById('pubAdvice').textContent = report.publisherAdvice || '暂无建议';
-    document.getElementById('prAdvice').textContent = report.prReply || '暂无回复';
+    const pubAdvice = document.getElementById('pubAdvice');
+    const prAdvice = document.getElementById('prAdvice');
+    if (pubAdvice) pubAdvice.textContent = report.publisherAdvice || '暂无建议';
+    if (prAdvice) prAdvice.textContent = report.prReply || '暂无回复';
 
     // 显示结果区域
-    ui.results.classList.remove('hidden');
+    if (ui.results) ui.results.classList.remove('hidden');
   } catch (e) {
     console.error('渲染结果失败:', e);
     alert('渲染结果时出现错误: ' + e.message);
@@ -280,8 +300,10 @@ async function analyzeContent(content, title) {
     progressInterval = setInterval(() => {
       if (progress < 95) {
         progress += 5;
-        document.getElementById('progressInner').style.width = progress + '%';
-        document.getElementById('pct').textContent = Math.round(progress);
+        const progressInner = document.getElementById('progressInner');
+        const pctElement = document.getElementById('pct');
+        if (progressInner) progressInner.style.width = progress + '%';
+        if (pctElement) pctElement.textContent = Math.round(progress);
       }
     }, 500);
     
@@ -305,8 +327,10 @@ async function analyzeContent(content, title) {
       if (progressInterval) clearInterval(progressInterval);
       
       console.log('API响应状态:', response.status);
-      document.getElementById('progressInner').style.width = '98%';
-      document.getElementById('pct').textContent = '98';
+      const progressInner = document.getElementById('progressInner');
+      const pctElement = document.getElementById('pct');
+      if (progressInner) progressInner.style.width = '98%';
+      if (pctElement) pctElement.textContent = '98';
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -317,8 +341,8 @@ async function analyzeContent(content, title) {
       const data = await response.json();
       console.log('API响应数据:', data);
       
-      document.getElementById('progressInner').style.width = '100%';
-      document.getElementById('pct').textContent = '100';
+      if (progressInner) progressInner.style.width = '100%';
+      if (pctElement) pctElement.textContent = '100';
       
       // 获取结果文本
       const resultText = data.choices?.[0]?.message?.content || 
@@ -349,7 +373,7 @@ async function analyzeContent(content, title) {
 
 // 主处理函数
 async function handleAnalyze() {
-  const raw = ui.input.value.trim(); 
+  const raw = ui.input?.value.trim(); 
   if (!raw) {
     alert('请输入要分析的内容');
     return; 
@@ -361,8 +385,10 @@ async function handleAnalyze() {
   }
   
   isAnalyzing = true;
-  ui.btn.disabled = true;
-  ui.btn.textContent = 'Analyzing...';
+  if (ui.btn) {
+    ui.btn.disabled = true;
+    ui.btn.textContent = 'Analyzing...';
+  }
   
   showProgress();
   
@@ -388,32 +414,41 @@ async function handleAnalyze() {
     console.error('处理分析失败:', e);
     
     // 显示错误信息
-    ui.summary.textContent = '分析失败: ' + e.message;
-    ui.summary.classList.remove('hidden').classList.add('conf-low');
+    if (ui.summary) {
+      ui.summary.textContent = '分析失败: ' + e.message;
+      ui.summary.classList.remove('hidden');
+      if (ui.summary.classList) {
+        ui.summary.classList.add('conf-low');
+      }
+    }
     
     // 隐藏其他结果
-    ui.fourDim.classList.add('hidden');
-    ui.results.classList.add('hidden');
+    if (ui.fourDim) ui.fourDim.classList.add('hidden');
+    if (ui.results) ui.results.classList.add('hidden');
   } finally {
     hideProgress();
     isAnalyzing = false;
-    ui.btn.disabled = false;
-    ui.btn.textContent = 'Analyze';
+    if (ui.btn) {
+      ui.btn.disabled = false;
+      ui.btn.textContent = 'Analyze';
+    }
   }
 }
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
   console.log('页面加载完成，初始化事件监听器');
-  ui.btn.addEventListener('click', handleAnalyze);
+  if (ui.btn) ui.btn.addEventListener('click', handleAnalyze);
   
   // 支持回车键触发分析
-  ui.input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAnalyze();
-    }
-  });
+  if (ui.input) {
+    ui.input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleAnalyze();
+      }
+    });
+  }
 });
 
 
