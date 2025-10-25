@@ -63,6 +63,46 @@ function correctEmotionEN(rawEmo, text) {
   return Math.max(rawEmo, maxPhrase);
 }
 
+/* ===== 工具函数 ===== */
+function showProgress() {
+  ui.progress.classList.remove('hidden');
+  ui.btn.disabled = true;
+}
+function hideProgress() {
+  ui.progress.classList.add('hidden');
+  ui.btn.disabled = false;
+}
+async function fetchContent(raw) {
+  // 如果是 URL，走后端字幕接口；否则直接当正文
+  if (raw.startsWith('http')) {
+    const res = await fetch('/api/fetch-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: raw })
+    });
+    if (!res.ok) throw new Error('Failed to fetch article');
+    const { text } = await res.json();
+    return { content: text, title: raw };
+  }
+  // 纯文本：第一行当标题，其余当正文
+  const [title, ...rest] = raw.split('\n');
+  return { title: title || 'Untitled', content: rest.join('\n') };
+}
+async function analyzeContent(content, title) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content })
+  });
+  if (!res.ok) throw new Error('Analysis failed');
+  return res.json();
+}
+function render(report) {
+  /* 这里只给极简示例，按你实际 DOM 需求展开 */
+  ui.summary.textContent = JSON.stringify(report, null, 2);
+  ui.summary.classList.remove('hidden');
+}
+
 /* 主流程 */
 async function handleAnalyze() {
   const raw = ui.input.value.trim();
@@ -87,13 +127,5 @@ async function handleAnalyze() {
     hideProgress();
     isAnalyzing = false;
   }
-}
-function showProgress() {
-  ui.progress.classList.remove('hidden');
-  ui.btn.disabled = true;
-}
-function hideProgress() {
-  ui.progress.classList.add('hidden');
-  ui.btn.disabled = false;
 }
 window.addEventListener('DOMContentLoaded', () => ui.btn.addEventListener('click', handleAnalyze));
