@@ -42,7 +42,7 @@ export default async function handler(req) {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 25000);
 
-    const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
       signal: controller.signal,
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
