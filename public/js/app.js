@@ -42,7 +42,7 @@ async function setCache(content, title, report) {
 
 /* 英文词典校正 – 动态加载，兼容旧浏览器 */
 let enEmoDict = {};                       // 先放空对象，避免报错
-fetch('/api/dict/en-emotionDict.json')    // 运行时拉取字典
+fetch('/dict/en-emotionDict.json')   // 运行时拉取字典
   .then(r => r.json())
   .then(arr => {
     enEmoDict = Object.fromEntries(arr.map(({ word, intensity }) => [word, intensity]));
