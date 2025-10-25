@@ -12,7 +12,8 @@ async function getCache(content, title) { const key = await hash(content + title
 async function setCache(content, title, report) { const key = await hash(content + title); LRU.set(key, { ts: Date.now(), report }); if (LRU.size > 2000) LRU.delete(LRU.keys().next().value); }
 
 /* 英文词典校正 */
-import enEmoDict from '../api/dict/en-emotionDict.json' assert { type: 'json' };
+import enEmoDictArr from '../api/dict/en-emotionDict.json' assert { type: 'json' };
+const enEmoDict = Object.fromEntries(enEmoDictArr.map(({ word, intensity }) => [word, intensity]));
 function correctEmotionEN(rawEmo, text) { if (!text || !enEmoDict) return rawEmo; const tokens = text.toLowerCase().match(/\b[\w']+\b/g) || []; let maxPhrase = 0; for (let n = 1; n <= 3; n++) { for (let i = 0; i <= tokens.length - n; i++) { const w = tokens.slice(i, i + n).join(' '); if (enEmoDict[w]) maxPhrase = Math.max(maxPhrase, enEmoDict[w]); } } return Math.max(rawEmo, maxPhrase); }
 
 /* 其余原逻辑省略，仅贴调用点 */
