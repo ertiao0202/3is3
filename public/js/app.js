@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM)  Final */
+/* public/js/app.js  (ESM)  Final - 增强版 */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -81,7 +81,7 @@ function hideProgress() {
   ui.progress.classList.add('hidden');
 }
 
-// 获取网页内容的函数（简化版，实际项目中可能需要更复杂的逻辑）
+// 获取网页内容的函数（简化版）
 async function fetchContent(input) {
   // 如果输入是URL，则提取内容，否则直接返回输入内容
   if (input.startsWith('http')) {
@@ -95,8 +95,9 @@ async function fetchContent(input) {
 // 解析API返回的结果
 function parseResult(resultText) {
   try {
+    console.log('开始解析结果:', resultText);
+    
     // 简化解析逻辑，实际项目中需要根据API返回格式进行解析
-    const lines = resultText.split('\n');
     const parsed = {
       credibility: 0,
       facts: [],
@@ -108,72 +109,82 @@ function parseResult(resultText) {
       dimensions: { ts: 0, fd: 0, eb: 0, cs: 0 }
     };
 
+    // 如果结果是错误信息，直接返回错误
+    if (resultText.includes('Error') || resultText.includes('error')) {
+      parsed.summary = 'API Error: ' + resultText;
+      return parsed;
+    }
+
     // 解析可信度
-    const credibilityMatch = resultText.match(/Credibility:(\d+(?:\.\d+)?)/);
+    const credibilityMatch = resultText.match(/Credibility:\s*(\d+(?:\.\d+)?)/i);
     if (credibilityMatch) {
       parsed.credibility = parseFloat(credibilityMatch[1]);
     }
 
     // 解析事实
-    const factsMatches = resultText.match(/<fact>(.*?)<\/fact>/g);
+    const factsMatches = resultText.match(/<fact>(.*?)<\/fact>/gi);
     if (factsMatches) {
-      parsed.facts = factsMatches.map(fact => fact.replace(/<\/?fact>/g, ''));
+      parsed.facts = factsMatches.map(fact => fact.replace(/<\/?fact>/gi, '').trim());
     }
 
     // 解析观点
-    const opinionsMatches = resultText.match(/<opinion>(.*?)<\/opinion>/g);
+    const opinionsMatches = resultText.match(/<opinion>(.*?)<\/opinion>/gi);
     if (opinionsMatches) {
-      parsed.opinions = opinionsMatches.map(op => op.replace(/<\/?opinion>/g, ''));
+      parsed.opinions = opinionsMatches.map(op => op.replace(/<\/?opinion>/gi, '').trim());
     }
 
     // 解析偏见
-    const biasMatches = resultText.match(/Bias:.*?(?=\n\n|$)/g);
+    const biasMatches = resultText.match(/Bias:.*?(?=\n\n|$)/i);
     if (biasMatches) {
       parsed.bias = biasMatches;
     }
 
     // 解析发布商建议
-    const pubMatch = resultText.match(/Pub:(.*?)(?=\nPR:|$)/s);
+    const pubMatch = resultText.match(/Pub:\s*(.*?)(?=\nPR:|$)/i);
     if (pubMatch) {
       parsed.publisherAdvice = pubMatch[1].trim();
     }
 
     // 解析公关回复
-    const prMatch = resultText.match(/PR:(.*?)(?=\nSum:|$)/s);
+    const prMatch = resultText.match(/PR:\s*(.*?)(?=\nSum:|$)/i);
     if (prMatch) {
       parsed.prReply = prMatch[1].trim();
     }
 
     // 解析总结
-    const sumMatch = resultText.match(/Sum:(.*?)(?=\n|$)/s);
+    const sumMatch = resultText.match(/Sum:\s*(.*?)(?=\n|$)/i);
     if (sumMatch) {
       parsed.summary = sumMatch[1].trim();
+    } else {
+      // 如果没有找到Sum，使用整个文本作为总结
+      parsed.summary = resultText.substring(0, 200) + '...';
     }
 
-    // 解析四维度
-    const tsMatch = resultText.match(/Source Credibility:(\d+(?:\.\d+)?)/);
-    const fdMatch = resultText.match(/Fact Density:(\d+(?:\.\d+)?)/);
-    const ebMatch = resultText.match(/Emotional Neutrality:(\d+(?:\.\d+)?)/);
-    const csMatch = resultText.match(/Consistency:(\d+(?:\.\d+)?)/);
+    // 解析四维度（如果API返回这些信息）
+    const tsMatch = resultText.match(/Source Credibility:\s*(\d+(?:\.\d+)?)/i);
+    const fdMatch = resultText.match(/Fact Density:\s*(\d+(?:\.\d+)?)/i);
+    const ebMatch = resultText.match(/Emotional Neutrality:\s*(\d+(?:\.\d+)?)/i);
+    const csMatch = resultText.match(/Consistency:\s*(\d+(?:\.\d+)?)/i);
     
     parsed.dimensions = {
-      ts: tsMatch ? parseFloat(tsMatch[1]) : 0,
-      fd: fdMatch ? parseFloat(fdMatch[1]) : 0,
-      eb: ebMatch ? parseFloat(ebMatch[1]) : 0,
-      cs: csMatch ? parseFloat(csMatch[1]) : 0
+      ts: tsMatch ? parseFloat(tsMatch[1]) : (parsed.credibility || 5),
+      fd: fdMatch ? parseFloat(fdMatch[1]) : 5,
+      eb: ebMatch ? parseFloat(ebMatch[1]) : 5,
+      cs: csMatch ? parseFloat(csMatch[1]) : 5
     };
 
+    console.log('解析完成:', parsed);
     return parsed;
   } catch (e) {
     console.error('解析结果失败:', e);
     return {
       credibility: 0,
-      facts: ['解析失败'],
-      opinions: ['解析失败'],
-      bias: ['解析失败'],
-      publisherAdvice: '解析失败',
-      prReply: '解析失败',
-      summary: '解析失败',
+      facts: ['解析失败: ' + e.message],
+      opinions: ['解析失败: ' + e.message],
+      bias: ['解析失败: ' + e.message],
+      publisherAdvice: '解析失败: ' + e.message,
+      prReply: '解析失败: ' + e.message,
+      summary: '解析失败: ' + e.message,
       dimensions: { ts: 0, fd: 0, eb: 0, cs: 0 }
     };
   }
@@ -263,47 +274,70 @@ async function analyzeContent(content, title) {
     console.log('开始分析内容:', { content: content.substring(0, 100) + '...', title });
     
     // 模拟进度更新
+    let progress = 0;
     const progressInterval = setInterval(() => {
-      const currentWidth = parseFloat(document.getElementById('progressInner').style.width || '0');
-      if (currentWidth < 90) {
-        const newWidth = Math.min(90, currentWidth + 5);
-        document.getElementById('progressInner').style.width = newWidth + '%';
-        document.getElementById('pct').textContent = Math.round(newWidth);
+      if (progress < 95) {
+        progress += 5;
+        document.getElementById('progressInner').style.width = progress + '%';
+        document.getElementById('pct').textContent = Math.round(progress);
       }
     }, 500);
     
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, title })
-    });
+    // 设置超时
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      console.log('请求超时');
+    }, 45000); // 45秒超时
     
-    clearInterval(progressInterval);
-    document.getElementById('progressInner').style.width = '95%';
-    document.getElementById('pct').textContent = '95';
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API响应错误:', response.status, errorText);
-      throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+    try {
+      console.log('发送请求到API...');
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, title }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      
+      console.log('API响应状态:', response.status);
+      document.getElementById('progressInner').style.width = '98%';
+      document.getElementById('pct').textContent = '98';
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API响应错误:', response.status, errorText);
+        throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('API响应数据:', data);
+      
+      document.getElementById('progressInner').style.width = '100%';
+      document.getElementById('pct').textContent = '100';
+      
+      // 获取结果文本
+      const resultText = data.choices?.[0]?.message?.content || 
+                        (data.error ? `Error: ${data.error}` : 
+                         (data && typeof data === 'object' ? JSON.stringify(data) : String(data)));
+      
+      console.log('原始结果文本:', resultText);
+      
+      const parsedResult = parseResult(resultText);
+      console.log('解析后的结果:', parsedResult);
+      
+      return parsedResult;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error('请求超时，请稍后重试');
+      }
+      throw fetchError;
     }
-    
-    const data = await response.json();
-    console.log('API响应数据:', data);
-    
-    document.getElementById('progressInner').style.width = '100%';
-    document.getElementById('pct').textContent = '100';
-    
-    // 模拟解析结果
-    const resultText = data.choices?.[0]?.message?.content || 
-                      (data && typeof data === 'object' ? JSON.stringify(data) : String(data));
-    
-    console.log('原始结果文本:', resultText);
-    
-    const parsedResult = parseResult(resultText);
-    console.log('解析后的结果:', parsedResult);
-    
-    return parsedResult;
   } catch (e) {
     console.error('分析内容失败:', e);
     clearInterval(progressInterval);
@@ -350,9 +384,15 @@ async function handleAnalyze() {
     render(report);
   } catch (e) {
     console.error('处理分析失败:', e);
-    alert('分析失败: ' + e.message);
+    clearInterval(progressInterval);
+    
+    // 显示错误信息
     ui.summary.textContent = '分析失败: ' + e.message;
-    ui.summary.classList.remove('hidden');
+    ui.summary.classList.remove('hidden').classList.add('conf-low');
+    
+    // 隐藏其他结果
+    ui.fourDim.classList.add('hidden');
+    ui.results.classList.add('hidden');
   } finally {
     hideProgress();
     isAnalyzing = false;
@@ -373,23 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleAnalyze();
     }
   });
-  
-  // 检查API可用性
-  checkApiStatus();
 });
-
-// 检查API状态
-async function checkApiStatus() {
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'OPTIONS' // 使用OPTIONS方法检查API端点
-    });
-    console.log('API端点状态:', response.status);
-  } catch (e) {
-    console.error('API连接测试失败:', e);
-    console.warn('API可能无法访问，请检查后端配置');
-  }
-}
 
 
 
