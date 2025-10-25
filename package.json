@@ -2,6 +2,7 @@
   "name": "factlens-app",
   "version": "1.0.0",
   "description": "Instant Article Bias Check – Moonshot-v1-8k",
+  "type": "module",
   "scripts": {
     "dev": "vercel dev"
   },
