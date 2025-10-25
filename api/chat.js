@@ -1,4 +1,4 @@
-// api/chat.js  Node.js Runtime
+// api/chat.js  Node.js Runtime 
 export const runtime = 'nodejs';
 
 /* 0. 环境变量自检，若空立即 500 */
