@@ -1,5 +1,5 @@
-// api/chat.js  Edge Runtime
-export const runtime = 'nodejs';   // 原来 'edge'
+// api/chat.js  Node.js Runtime
+export const runtime = 'nodejs';
 
 import { Redis } from '@upstash/redis';
 const redis = new Redis({
@@ -37,7 +37,13 @@ export default async function handler(req) {
 
     const prompt = buildPrompt(content, title);
     const payload = { model: MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 600 };
+
+    // 25 秒超时，防止 300 s 被平台杀
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 25000);
+
     const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+      signal: controller.signal,
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
