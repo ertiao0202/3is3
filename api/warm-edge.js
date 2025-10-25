@@ -1,5 +1,5 @@
 // scripts/warm-edge.js  Edge Runtime
-export const runtime = 'edge';
+export const runtime = 'nodejs';   // 原来 'edge'
 
 import { Redis } from '@upstash/redis';
 
