@@ -1,5 +1,5 @@
 // api/chat.js  Edge Runtime
-export const config = { runtime: 'edge' };
+export const runtime = 'nodejs';   // 原来 'edge'
 
 import { Redis } from '@upstash/redis';
 const redis = new Redis({
