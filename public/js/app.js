@@ -88,5 +88,12 @@ async function handleAnalyze() {
     isAnalyzing = false;
   }
 }
-
+function showProgress() {
+  ui.progress.classList.remove('hidden');
+  ui.btn.disabled = true;
+}
+function hideProgress() {
+  ui.progress.classList.add('hidden');
+  ui.btn.disabled = false;
+}
 window.addEventListener('DOMContentLoaded', () => ui.btn.addEventListener('click', handleAnalyze));
