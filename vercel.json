@@ -1,8 +1,4 @@
 {
-  "functions": {
-    "api/chat.js": { "runtime": "vercel-edge@1.0.0" },
-    "api/warm-edge.js": { "runtime": "vercel-edge@1.0.0" }
-  },
   "crons": [
     { "path": "/api/warm-edge", "schedule": "0 4 * * *" }
   ]
