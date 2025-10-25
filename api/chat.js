@@ -29,6 +29,14 @@ export default async function handler(req) {
     const body = await req.json();
     const { content, title } = body;
 
+    // 自检：若 Redis 环境变量空，立即返回 500 并带详情
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      return new Response(
+        `Redis env missing: URL=${process.env.UPSTASH_REDIS_REST_URL}, TOKEN=${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+        { status: 500 }
+      );
+    }
+
     const key = `cache:${Buffer.from(content + title).toString('base64').slice(0, 32)}`;
     const cached = await redis.get(key);
     if (cached) {
@@ -38,9 +46,9 @@ export default async function handler(req) {
     const prompt = buildPrompt(content, title);
     const payload = { model: MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 600 };
 
-    /* 10 秒超时，避免被平台 300 s 杀 */
+    /* 5 秒超时，避免被平台 300 s 杀 */
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const timeout = setTimeout(() => controller.abort(), 5_000);
 
     const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
       signal: controller.signal,
