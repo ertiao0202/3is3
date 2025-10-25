@@ -1,4 +1,4 @@
-/* public/js/app.js  (ESM)  Final - 增强版 */
+/* public/js/app.js  (ESM)  Final - 最终修复版 */
 const $ = s => document.querySelector(s);
 const url = '/api/chat';
 
@@ -270,12 +270,14 @@ function render(report) {
 
 // 分析内容函数
 async function analyzeContent(content, title) {
+  let progressInterval; // 在函数开始处声明
+  
   try {
     console.log('开始分析内容:', { content: content.substring(0, 100) + '...', title });
     
     // 模拟进度更新
     let progress = 0;
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       if (progress < 95) {
         progress += 5;
         document.getElementById('progressInner').style.width = progress + '%';
@@ -300,7 +302,7 @@ async function analyzeContent(content, title) {
       });
       
       clearTimeout(timeoutId);
-      clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       
       console.log('API响应状态:', response.status);
       document.getElementById('progressInner').style.width = '98%';
@@ -331,7 +333,7 @@ async function analyzeContent(content, title) {
       return parsedResult;
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      clearInterval(progressInterval);
+      if (progressInterval) clearInterval(progressInterval);
       
       if (fetchError.name === 'AbortError') {
         throw new Error('请求超时，请稍后重试');
@@ -340,7 +342,7 @@ async function analyzeContent(content, title) {
     }
   } catch (e) {
     console.error('分析内容失败:', e);
-    clearInterval(progressInterval);
+    if (progressInterval) clearInterval(progressInterval);
     throw e;
   }
 }
@@ -384,7 +386,6 @@ async function handleAnalyze() {
     render(report);
   } catch (e) {
     console.error('处理分析失败:', e);
-    clearInterval(progressInterval);
     
     // 显示错误信息
     ui.summary.textContent = '分析失败: ' + e.message;
