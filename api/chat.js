@@ -1,27 +1,22 @@
-// api/chat.js  Node.js Runtime 
+// api/chat.js  Node.js Runtime
 export const runtime = 'nodejs';
 
-/* 0. 环境变量自检，若空立即 500 */
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const MODEL = 'moonshot-v1-8k@quant';
 const apiKey = process.env.KIMI_API_KEY;
 
-if (!redisUrl || !redisToken) {
-  throw new Error(`Redis env missing: URL=${redisUrl}, TOKEN=${redisToken}`);
-}
-if (!apiKey) {
-  throw new Error('KIMI_API_KEY missing');
-}
+let redis;
+try {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!redisUrl || !redisToken) throw new Error('Redis env empty');
+  if (!apiKey) throw new Error('KIMI_API_KEY empty');
 
-/* 1. 带 connect timeout 的 Redis 客户端 */
-import { Redis } from '@upstash/redis';
-const redis = new Redis({
-  url: redisUrl,
-  token: redisToken,
-  retry: { retries: 0 }, // 不重试，立即失败
-});
-
-const MODEL = 'moonshot-v1-8k@quant';
+  const { Redis } = await import('@upstash/redis');
+  redis = new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 } });
+} catch (e) {
+  // 初始化失败立即 500
+  throw new Error(`Redis init failed: ${e.message}`);
+}
 
 const buildPrompt = (content, title) =>
 `FactLens-EN-v2
@@ -35,24 +30,19 @@ Text:${content}`.trim();
 
 export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-
   try {
     const body = await req.json();
     const { content, title } = body;
 
     const key = `cache:${Buffer.from(content + title).toString('base64').slice(0, 32)}`;
-    const cached = await redis.get(key); // 若连不上，这里会抛错
-    if (cached) {
-      return new Response(cached, { headers: { 'content-type': 'application/json', 'X-Cache': 'HIT' } });
-    }
+    const cached = await redis.get(key);
+    if (cached) return new Response(cached, { headers: { 'content-type': 'application/json', 'X-Cache': 'HIT' } });
 
     const prompt = buildPrompt(content, title);
     const payload = { model: MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 600 };
 
-    /* 2. 5 秒 Moonshot 超时 */
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 5_000);
-
     const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
       signal: controller.signal,
       method: 'POST',
