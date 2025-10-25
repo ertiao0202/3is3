@@ -1,4 +1,8 @@
 {
+  "functions": {
+    "api/chat.js":      { "runtime": "nodejs20.x" },
+    "api/warm-edge.js": { "runtime": "nodejs20.x" }
+  },
   "crons": [
     { "path": "/api/warm-edge", "schedule": "0 4 * * *" }
   ]
