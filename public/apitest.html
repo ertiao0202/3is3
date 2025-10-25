@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FactLens API Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34495e;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .error {
+      border-left-color: #e74c3c;
+      background: #fdf2f2;
+    }
+    .success {
+      border-left-color: #27ae60;
+      background: #f2fdf5;
+    }
+    .info {
+      border-left-color: #f39c12;
+      background: #fdf8f2;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      background: #f8f9fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FactLens API Test</h1>
+    
+    <div class="form-group">
+      <label for="testContent">Test Content:</label>
+      <textarea id="testContent" placeholder="Enter test content here...">Artificial intelligence is a wonderful field that has seen tremendous growth in recent years. Many experts believe that AI will revolutionize various industries and improve our daily lives. However, some concerns have been raised about the potential risks of AI development, particularly in areas such as job displacement and privacy.</textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="testTitle">Test Title:</label>
+      <input type="text" id="testTitle" value="Test Article" />
+    </div>
+    
+    <button id="testBtn">Test API Connection</button>
+    <button id="testDirectBtn">Test Direct API Call</button>
+    
+    <div id="status" class="status"></div>
+    <div id="result" class="result" style="display: none;"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const testBtn = document.getElementById('testBtn');
+      const testDirectBtn = document.getElementById('testDirectBtn');
+      const testContent = document.getElementById('testContent');
+      const testTitle = document.getElementById('testTitle');
+      const resultDiv = document.getElementById('result');
+      const statusDiv = document.getElementById('status');
+
+      function updateStatus(message) {
+        statusDiv.innerHTML = `<div><strong>Status:</strong> ${message}</div>`;
+      }
+
+      // 测试API连接
+      testBtn.addEventListener('click', async function() {
+        testBtn.disabled = true;
+        testBtn.textContent = 'Testing...';
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'result info';
+        
+        try {
+          updateStatus('Sending request to /api/chat...');
+          resultDiv.textContent = 'Sending request to API...\n';
+          
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: testContent.value,
+              title: testTitle.value
+            })
+          });
+          
+          resultDiv.textContent += `Response status: ${response.status}\n`;
+          updateStatus(`Response status: ${response.status}`);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API Error: ${response.status} - ${errorText}`);
+          }
+          
+          const data = await response.json();
+          resultDiv.textContent += `Success! Response received.\n\nData: ${JSON.stringify(data, null, 2)}`;
+          resultDiv.className = 'result success';
+          updateStatus('API call successful!');
+        } catch (error) {
+          console.error('API test failed:', error);
+          resultDiv.textContent = `Test Failed:\n${error.message}\n\n${error.stack}`;
+          resultDiv.className = 'result error';
+          updateStatus('API call failed!');
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = 'Test API Connection';
+        }
+      });
+
+      // 直接测试API
+      testDirectBtn.addEventListener('click', async function() {
+        testDirectBtn.disabled = true;
+        testDirectBtn.textContent = 'Testing Direct...';
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'result info';
+        
+        try {
+          updateStatus('Direct API call...');
+          resultDiv.textContent = 'Making direct API call...\n';
+          
+          // 直接调用API
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            controller.abort();
+            resultDiv.textContent += 'Request timed out!\n';
+          }, 10000); // 10秒超时
+          
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: "This is a test.",
+              title: "Test"
+            }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          resultDiv.textContent += `Status: ${response.status}\n`;
+          updateStatus(`Status: ${response.status}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            resultDiv.textContent += `\nResponse:\n${JSON.stringify(data, null, 2)}`;
+            resultDiv.className = 'result success';
+            updateStatus('Direct call successful!');
+          } else {
+            const errorText = await response.text();
+            resultDiv.textContent += `\nError: ${errorText}`;
+            resultDiv.className = 'result error';
+            updateStatus('Direct call failed!');
+          }
+        } catch (error) {
+          console.error('Direct test failed:', error);
+          resultDiv.textContent = `Direct test failed:\n${error.message}`;
+          resultDiv.className = 'result error';
+          updateStatus('Direct call failed!');
+        } finally {
+          testDirectBtn.disabled = false;
+          testDirectBtn.textContent = 'Test Direct API Call';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
+
