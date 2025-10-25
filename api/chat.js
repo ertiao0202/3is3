@@ -1,10 +1,24 @@
 // api/chat.js  Node.js Runtime
 export const runtime = 'nodejs';
 
+/* 0. 环境变量自检，若空立即 500 */
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const apiKey = process.env.KIMI_API_KEY;
+
+if (!redisUrl || !redisToken) {
+  throw new Error(`Redis env missing: URL=${redisUrl}, TOKEN=${redisToken}`);
+}
+if (!apiKey) {
+  throw new Error('KIMI_API_KEY missing');
+}
+
+/* 1. 带 connect timeout 的 Redis 客户端 */
 import { Redis } from '@upstash/redis';
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: redisUrl,
+  token: redisToken,
+  retry: { retries: 0 }, // 不重试，立即失败
 });
 
 const MODEL = 'moonshot-v1-8k@quant';
@@ -22,23 +36,12 @@ Text:${content}`.trim();
 export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
-  const apiKey = process.env.KIMI_API_KEY;
-  if (!apiKey) return new Response('Missing KIMI_API_KEY', { status: 500 });
-
   try {
     const body = await req.json();
     const { content, title } = body;
 
-    // 自检：若 Redis 环境变量空，立即返回 500 并带详情
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-      return new Response(
-        `Redis env missing: URL=${process.env.UPSTASH_REDIS_REST_URL}, TOKEN=${process.env.UPSTASH_REDIS_REST_TOKEN}`,
-        { status: 500 }
-      );
-    }
-
     const key = `cache:${Buffer.from(content + title).toString('base64').slice(0, 32)}`;
-    const cached = await redis.get(key);
+    const cached = await redis.get(key); // 若连不上，这里会抛错
     if (cached) {
       return new Response(cached, { headers: { 'content-type': 'application/json', 'X-Cache': 'HIT' } });
     }
@@ -46,9 +49,9 @@ export default async function handler(req) {
     const prompt = buildPrompt(content, title);
     const payload = { model: MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 600 };
 
-    /* 5 秒超时，避免被平台 300 s 杀 */
+    /* 2. 5 秒 Moonshot 超时 */
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
+    setTimeout(() => controller.abort(), 5_000);
 
     const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
       signal: controller.signal,
